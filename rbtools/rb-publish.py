@@ -4,10 +4,10 @@ rb_server_url = "http://reviews.reviewboard.org"
 local_repository = Repository.Repository(rb_server_url, '')
 
 rb_interface = RBInterface.RBInterface()
-server_mgr = ServerManager.ServerManager(rb_interface)
+server_mgr = ServerManager.ServerManager(rb_interface, local_repository)
 
 #CONSIDERATION:  should login() return a success/error code, for a more specific indication of what went wrong 
-if !server_mgr.login(rb_server_url, local_repository)
+if !server_mgr.login()
     print "Login unsuccessfull!"
 
 
