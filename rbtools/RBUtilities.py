@@ -1,4 +1,20 @@
+import cookielib
+import difflib
+import marshal
+import mimetools
+import ntpath
 import os
+import re
+import socket
+import stat
+import subprocess
+import sys
+import tempfile
+import urllib
+import urllib2
+from optparse import OptionParser
+from tempfile import mkstemp
+from urlparse import urljoin, urlparse
 
 class RBUtilities:
 	"""
@@ -23,20 +39,169 @@ class RBUtilities:
 		"""
 		
 		self.log_file = log_file
-
-	def system_call( self, call = '' ):
-		"""sytem_call( self, call )
 		
-		Performs a system call. As of right now, this is merely using os.system
+	def get_repository( self, url = None, repo_types = ['svn', 'cvs', 'git', 'hg', 'perforce', 'clearcase'], additional_repos = []):
+		"""get_repository( self, url, repo_types, additional_repos )
+		
+		Finds the correct type of Repository and returns it.
 		
 		Parameters:
-			call, the call being executed. DEFAULTS: ''
-			
-		Returns: the response code
+			url, the url of the server. Defaults to None, but is required
+			repo_types, types of repo this function would test. It builds
+					the objects, passing them the url as a parameter. Defaults
+					to trying svn, cvs, git, mercurial, perforce and clearcase
+			additional_repos, a list of additional Repository objects (already
+					created) to try (they will be tried first). This is separated
+					from repo_types because repo_types autoinitializes the
+					Repository objects, which it couldn't do for types it
+					doesn't know. Defaults to []
 		
+		Returns a Repository object of the correct type or None, if none are found
+											
 		"""
 		
-		return os.system( call )
+		if not url:
+			raise_error( "missingRequiredParameter", "get_repository requires url to be passed as a parameter")
+	
+		possible_repos = additional_repos
+	
+		for type in repo_types:
+			type = type.lower()
+		
+			if type == 'svn':
+				possible_repos.add( SVNRepo( url ) )
+			elif type = 'cvs':
+				possible_repos.add( CVSRepo( url ) )
+			elif type = 'git':
+				possible_repos.add( GitRepo( url ) )
+			elif type = 'hg' or type = 'mercurial':
+				possible_repos.add( MercurialRepo( url ) )
+			elif type = 'perforce':
+				possible_repos.add( PerforceRepo( url ) )
+			elif type = 'clearcase' or type = 'clear case':
+				possible_repos.add( ClearCaseRepo( url ) )
+			else
+				raise_warning( "UnreckognizedType", type + "is not a recognized type. If it is a Repository type, create it yourself and pass it in using additional_repos" )
+		
+		repo = None
+		
+		for rep in possible_repos:
+			if rep.get_info()
+				repo = rep
+				break
+			
+		return repo
+	
+	def make_tempfile():
+		"""
+		Creates a temporary file and returns the path. The path is stored
+		in an array for later cleanup.
+		"""
+		fd, tmpfile = mkstemp()
+		os.close(fd)
+		tempfiles.append(tmpfile)
+		return tmpfile
+				
+	def check_install(command):
+		"""
+		Try executing an external command and return a boolean indicating whether
+		that command is installed or not.  The 'command' argument should be
+		something that executes quickly, without hitting the network (for
+		instance, 'svn help' or 'git --version').
+		"""
+		try:
+			p = subprocess.Popen(command.split(' '),
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+			return True
+		except OSError:
+			return False
+
+	def execute(command, env=None, split_lines=False, ignore_errors=False,
+            extra_ignore_errors=(), translate_newlines=True):
+		"""
+		Utility function to execute a command and return the output.
+		"""
+		if isinstance(command, list):
+			debug(subprocess.list2cmdline(command))
+		else:
+			debug(command)
+
+		if env:
+			env.update(os.environ)
+		else:
+			env = os.environ.copy()
+
+		env['LC_ALL'] = 'en_US.UTF-8'
+		env['LANGUAGE'] = 'en_US.UTF-8'
+
+		if sys.platform.startswith('win'):
+			p = subprocess.Popen(command,
+								 stdin=subprocess.PIPE,
+								 stdout=subprocess.PIPE,
+								 stderr=subprocess.STDOUT,
+								 shell=False,
+								 universal_newlines=translate_newlines,
+								 env=env)
+		else:
+			p = subprocess.Popen(command,
+								 stdin=subprocess.PIPE,
+								 stdout=subprocess.PIPE,
+								 stderr=subprocess.STDOUT,
+								 shell=False,
+								 close_fds=True,
+								 universal_newlines=translate_newlines,
+								 env=env)
+		if split_lines:
+			data = p.stdout.readlines()
+		else:
+			data = p.stdout.read()
+		rc = p.wait()
+		if rc and not ignore_errors and rc not in extra_ignore_errors:
+			die('Failed to execute command: %s\n%s' % (command, data))
+
+		return data
+
+	def check_gnu_diff():
+		"""Checks if GNU diff is installed, and informs the user if it's not."""
+		has_gnu_diff = False
+
+		try:
+			result = execute(['diff', '--version'], ignore_errors=True)
+			has_gnu_diff = 'GNU diffutils' in result
+		except OSError:
+			pass
+
+		if not has_gnu_diff:
+			sys.stderr.write('\n')
+			sys.stderr.write('GNU diff is required for Subversion '
+							 'repositories. Make sure it is installed\n')
+			sys.stderr.write('and in the path.\n')
+			sys.stderr.write('\n')
+
+			if os.name == 'nt':
+				sys.stderr.write('On Windows, you can install this from:\n')
+				sys.stderr.write(GNU_DIFF_WIN32_URL)
+				sys.stderr.write('\n')
+
+			die()
+	
+	def die(msg=None):
+		"""
+		Cleanly exits the program with an error message. Erases all remaining
+		temporary files.
+		"""
+		for tmpfile in tempfiles:
+			try:
+				os.unlink(tmpfile)
+			except:
+				pass
+
+		if msg:
+			print msg
+
+		sys.exit(1)
 		
 	def output( self, text = '' ):
 		"""output( self, text )
