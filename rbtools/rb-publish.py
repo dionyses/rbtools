@@ -1,23 +1,18 @@
-#import API STUFF
+import sys
+import ServerInterface
+import ServerManager
 
-rb_server_url = "http://reviews.reviewboard.org"
-local_repository = Repository.Repository(rb_server_url, '')
+mgr = ServerManager.ServerManager('http://demo.reviewboard.org/', \
+    ServerInterface.ServerInterface("._cookie.tmp"), "._cookie.tmp")
 
-rb_interface = RBInterface.RBInterface()
-server_mgr = ServerManager.ServerManager(rb_interface, local_repository)
+if mgr.login():
+    print "logged in"
 
-#CONSIDERATION:  should login() return a success/error code, for a more specific indication of what went wrong 
-if !server_mgr.login()
-    print "Login unsuccessfull!"
+    if mgr.select_review_request(sys.argv[1]):
+        print "selected rr #%s" % sys.argv[1]
 
+        if mgr.publish_review_request():
+            print "published rr"
 
-#Make a new review request object.  Note that first creating a review request creates a draft.  This will have to be published eventually.
-review_request = server_mgr.CreateNewReviewRequest(local_repository)
-
-#Set any fields that need to be set
-review_request.set_field(<some field name>, <some field data>)
-#...
-
-#Finally, publish the review request
-review_request.publish()  
-
+            if mgr.close_review_request():
+                print "it worked!"

@@ -279,3 +279,4 @@ class ServerInterface(object):
         server that has not expired.
         """
         #TO DO
+        return False

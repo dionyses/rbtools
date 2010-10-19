@@ -1,3 +1,4 @@
+import string
 import ServerInterface
 try:
     from json import loads as json_loads
@@ -23,7 +24,7 @@ class Resource(object):
     Class used to represent a resource 
     """
     def __init__(self, resource, is_json=True):
-        self.url = None
+        self._url = None
         self.resource = resource
         self.is_json = is_json
         self.data = {}
@@ -34,13 +35,20 @@ class Resource(object):
             #Preform deserialization for xml
             pass
 
-        self.attempt_to_set_url()
+        if len(self.data) > 1:  
+            self._url = self.get_links()['self']['href']
+        else:
+            self._url = "There is no url associated with this resource."
 
-    def attempt_to_set_url(self):
-        self.url = self.get_links()['self']['href']
+    def __str__(self):
+        return self.resource
 
     def url(self):
-        return self.url
+        return self._url
+
+    def parent_url(self):
+        remove_index = string.rfind(self._url, '/', 0, len(self._url) - 1)
+        return self._url[0:remove_index+1] 
 
     def is_ok(self):
         """

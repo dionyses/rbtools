@@ -1,144 +1,328 @@
+import ServerInterface
+import RBUtilities
+import Resource
+import Repository
+import os
 import urllib2
 
-#import API STUFF
-	#APIError
-	#RBInterface
-import RBUtilities
-import Repository
 
 class ServerManager( object ):
-	"""
-	
-	ServerManager is the class responsible for handling server/client interactions.
-	It is responsible for authenticating with ReviewBoard servers, and creating
-	requests (such as new reviews, diffs, etc. ). It uses an RBInterface to make
-	its REST (POST, GET, DELETE, etc. ) calls, and also for storing passwords
-	
-	"""
+    """
 
-	LOGIN_PATH = 'api/json/accounts/login/'
+    ServerManager is the class responsible for handling server/client
+    interactions. It is responsible for authenticating with ReviewBoard servers,
+    and creating requests (such as new reviews, diffs, etc. ). It uses an
+    RBInterface to make its REST (POST, GET, DELETE, etc. ) calls, and also for
+    storing passwords
 
-	rb_interface = None			#Interfaces directly with the ReviewBoard server
-	default_repository = None	#Default repository 
-	util = None					#Utility functions
-	
-	def __init__( self, rb_interface = RBInterface.RBInterface(), default_repository = None, password_manager = urllib2.HTTPPasswordMgr, util = RBUtilities.RBUtilities() ):
-		"""__init( self, rb_interface, default_repository, password_mgr, util )
-		
-		Initiates a new ServerManager Object
-		
-		Parameters:
-			rb_interface, Interface that directly talks to the server. DEFAULTS: RBInterface.RBInterface()
-			default_repository, A repository object. DEFAULTS: None
-			password_manager, the password manager. Defaults: urllib2.HTTPPasswordMgr
-			util, A class of utility functions. DEFAULTS: RBUtilities.RBUtilities
-		
-		"""
-		
-		#utilities are dealt with first, as problems in other parameters will cause util.raise_error/warning to be calleed
-		if util is None:
-			util = RBUtilities.RBUtilities()			
-			util.raise_warning( "missingRequiredParameter", "ServerManager requires an RBUtilities. None dectected. Defaulting to RBUtilities (that is what is printing this warning)." )
-		elif not isinstance( util, RBInterface.RBInterface()):
-			util = RBUtilities.RBUtilities()
-			util.raise_warning( "invalidTypeError", "ServerManager requires rb_interface RBUtilites, or a subtype thereof. Defaulting to RBUtilities (that is what is printing this warning).")	
-		
-		if rb_interface is None:
-			util.raise_error( "missingRequiredParameter", "ServerManager requires an RBInterface. None dectected." )
-		elif not isinstance( rb_interface, RBInterface.RBInterface()):
-			util.raise_error( "invalidTypeError", "ServerManager requires rb_interface to be an RBInterface, or a subtype thereof.")
-		
-		if password_manager is None:
-			util.raise_error("missingRequiredParameter", "ServerManager requires a password manager. None detected." )
-		
-		self.rb_interface = rb_interface
-		self.password_manager = password_manager
-		self.util = util
-		
-		set_default_repository( default_repository )
-		
-	def set_default_repository( self, default_repository = None ):
-		"""set_default_repository( self, default_repository )
-		
-		Sets the default local repository to use in server communications
-		
-		Parameters:
-			default_repository, the repository to set default to, DEFAULTS: none
-			
-		"""
-		
-		if local_repository is None:
-			self.util.raise_warning( "NoDefault", "No default value set for the local repository" )
-		elif  not isinstance( default_repository, Repository ):
-			self.util.raise_error( "InvalidTypeError", "Servermanager requires the local repository to be a Repository, or as subtype thereof")
+    """
 
-		self.local_repository = local_repository
-		
-	def login( self, rb_user = None, rb_password = None, force = False, repo = None ):
-		"""login( self, rb_user, rb_password, force, repo )
-		
-		Logs into a ReviewBoard server
-		
-		Parameters:
-			force, whether or not to force entering of credentials (i.e. don't use cookie). Defaults: False
-			rb_user, The username. If None, the user will be prompted Defaults: None
-			rb_password, The password. If None, the user will be prompted Defaults: None
-			repo, the repository to log into. If None, defaults to default_repository. Defaults: None
-		
-		Returns: True/False whether login was successful
-		
-		"""
-		logged_in = False
-		
-		if repo is None:
-			repo = self.default_repository
-		
-		if not force and not self.rb_interface.has_valid_cookie( repo.server_url ):
-			util.output( "==>Connecting to Review Board at: " + repo.server_url )
-			
-			if not rb_password or not rb_user:
-				if rb_user:
-					util.output( "Username: " + rb_user )
-				else
-					rb_user = util.input( "Username: " )
-				
-				if not rb_password:
-					rb_password = util.input( "Password: ", True )
-					
-			try
-				rb_interface.post( LOGIN_PATH, { 'username': rb_user, 'password': rb_password })
-				
-				logged_in = True
-			except APIError, e:
-				util.raise_error( "LoginFailed", e )
-				
-		else:
-			logged_in = True #what needs to be done if there is a cookie?
-		
-		return logged_in
-		
-	def create_review_request( self, repo = None ):
-		"""create_review_request( self, repo ):
-		
-		Creates a ReviewRequest object that can be used to request  the creation of a new review
-		
-		Parameters:
-			repo, the local repository to be used. If None, default_repository will be used instead. DEFAULTS: None
-			
-		Returns: the new ReviewRequest (or None if an issue comes up
-		
-		"""
-		
-		new_review_cls = None
-		
-		#do stuff here
-		
-		return new_request_cls
-		
-	def get_review_request( self, review_id = None, repo = None )
-	
-		get_review_cls = None
-		
-		#do stuff here
-		
-		return get_review_cls
+    COOKIE_NAME = '.cookie.txt'
+    API_ROOT = 'api/'
+    LOGIN_PATH = 'json/accounts/login/'
+    REVIEWS_PATH = 'review-requests/'
+
+    root = None
+    current = None
+    interface = None
+    repo = None
+    cookie = None
+    util = None
+    user = None
+    url = None
+    
+    def __init__( self, url = None, interface = None, cookie = None, repo = None, util = RBUtilities.RBUtilities() ):
+        """__init__( self, url, interface, cookie, repo, util = RBUTilities.RBUtilities() )
+        
+            Initiates a new ServerManager Object
+            
+            Parameters:
+                url: The root url of the rb server
+                interface: the interface used to communicate with the server
+                cookie: the cookie file (if None, cookie is made in cwd)
+                util: A collection of utility functions
+        
+        """
+        
+        if util is None:
+            util = RBUtilities.RBUtilities()
+            util.raise_warning( "missingRequiredParameter", "ServerManager \
+                requires RBUtilities (or a child thereof) in order to function. \
+                Loading default RBUtilites." )
+        elif not isinstance( util, RBUtilities.RBUtilities ):
+            util = RBUtilities.RBUtilities()
+            util.raise_warning( "TypeMismatch", "ServerManager requires \
+                RBUtilities (or a child thereof) in order to function. Loading \
+                default RBUtilities instead." )
+
+        if not url:
+            util.raise_error( "missingRequiredParameter", "No server URL supplied" )
+
+        #is this how we need to do the cookie and interface?  for example, if the 
+        #interface already has a cookie, won't this overwrite it and thus invalidate it?
+        if not cookie:
+            cwd = os.getcwd()
+            
+            cookie = os.path.join( cwd , self.COOKIE_NAME )
+            
+        if not interface:
+            interface = ServerInterface.ServerInterface( cookie )
+            
+        if not repo:
+            repo = util.get_repository( url )        
+
+        self.url = url
+        self.interface = interface
+        self.cookie = cookie
+        self.repo = repo
+        self.util = util
+
+        try:
+            self.root = Resource.Resource( interface.get( self.url + self.API_ROOT ) )
+            if not self.root.is_ok():
+                util.die( "There was an error connecting to the ReviewBoard \
+                    server.  Please check the url and try again." )
+        except ServerInterface.APIError, e:
+            print e
+        except urllib2.HTTPError, e:
+            interface.process_error(e.code, e.read())
+
+        
+        self.current = self.root
+        
+    def login( self, rb_user = None, rb_password = None, force = False ):
+        """login( self, rb_user, rb_password, force, repo )
+        
+        Logs into a ReviewBoard server
+        
+        Parameters:
+            force, whether or not to force entering of credentials (i.e. don't use cookie). Defaults: False
+            rb_user, The username. If None, the user will be prompted Defaults: None
+            rb_password, The password. If None, the user will be prompted Defaults: None
+        
+        Returns: True/False whether login was successful
+        
+        """
+        
+        logged_in = False
+        
+        if force or not self.interface.has_valid_cookie( ):
+            self.util.output( "==>Connecting to Review Board at: " + self.root.url())
+            
+            if not rb_password or not rb_user:
+
+                if rb_user:
+                    self.util.output( "Username: " + rb_user )
+                else:
+                    rb_user = self.util.input( "Username: " )
+                
+                if not rb_password:
+                    rb_password = self.util.input( "Password: ", True )
+                
+            body = { 'username': rb_user, 'password': rb_password }
+            
+            try:
+                resp = Resource.Resource( self.interface.post( self.url + self.API_ROOT + self.LOGIN_PATH, body ) )
+                if resp.is_ok():
+                    logged_in = True
+            except ServerInterface.APIError, e:
+                print e
+            except urllib2.HTTPError, e:
+                self.interface.process_error(e.code, e.read())             
+                
+        else:
+            #valid cookie already established (and force=false).  Do nothing
+            logged_in = True 
+            
+        self.user = rb_user
+        
+        if logged_in:
+            self.util.output('login successful')
+        else:
+            self.util.raise_warning('LOGIN_FAILURE', 'Failed to login to the ReviewBoard server' )
+        
+        return logged_in
+        
+    def create_review_request( self, reponame = None ):
+        """create_review_request( self, repo ):
+        
+        Attempts to create a ReviewRequest object.  If successfull,
+        self.current is set to this new review request.
+        
+        Parameters:
+            reponame: The name of the server's repository (this will later be supplied by the Repository Class
+            
+        Returns: True/False whether creation was successful
+        
+        """
+        
+        body = {}
+        body['submit_as'] = self.user
+        body['repository'] = reponame
+         
+        try:
+            self.current = Resource.ReviewRequest( self.interface.post( self.root.url() + self.REVIEWS_PATH, body ) )
+
+            if not self.current.is_ok():
+                self.util.raise_error( "HTTPError", "Failed to get a response from the server" )
+            else:
+                return True
+
+        except ServerInterface.APIError, e:
+            print e
+        except urllib2.HTTPError, e:
+            #self.interface.process_error(e.code, e.read())        
+            print e
+
+        return False
+       
+    def select_review_request( self, review_num ):
+        """
+        Attempts to set the current resource to be the review request indicated
+        by the specified review_num.  The review must already exist.
+
+        Parameters:
+            review_num: the id of the review request to be selected
+
+        Returns: True/False whether the selection was successful
+        """
+        try:
+            self.current = Resource.ReviewRequest( \
+                self.interface.get( self.root.url() + self.REVIEWS_PATH + \
+                review_num + '/' ) \
+            ) 
+        except ServerInterface.APIError, e:
+            print e
+        except urllib2.HTTPError, e:
+            print e
+
+        return self.current.is_ok()
+
+    def update_draft_review_request( self, changes ):
+        """update_draft_review_request( self, changes ):
+        
+        Trys to update the current review request with the specified changes.
+        self.current must be ethier a ReviewRequest or DraftReviewRequest type
+        Resource.  Only changes that can effect a DraftReviewRequest will be
+        made.
+        
+        Parameters:
+            changes: a dictionary of changes to be made (ex. { 'public':'true' })
+
+        Returns: True/False whether update was successful
+        
+        """
+        if not isinstance(self.current, Resource.ReviewRequest) and \
+            not isinstance(self.current, Resource.DraftReviewRequest):
+                return False  
+        
+        draft_url = None
+        rsp = None
+        try:
+            if isinstance(self.current, Resource.ReviewRequest):
+                draft_url = self.current.draft_url()
+            else:
+                draft_url = self.current.url()
+
+            rsp = self.interface.put( draft_url, changes )
+            self.current = Resource.DraftReviewRequest( rsp )
+        except urllib2.HTTPError, e:
+            if e.code == 303:
+                #HTTP redirect error - the update was successful
+                #perform an HTTP get on the draft's parent 
+                if isinstance(self.current, Resource.ReviewRequest):
+                    rsp = self.interface.get( self.current.url() )
+                else:
+                    rsp = self.interface.get( self.current.parent_url() )
+
+                self.current = Resource.ReviewRequest( rsp )
+            else:
+                print e
+                self.util.raise_error( "HTTPError", "Failed on update" )
+
+        return self.current.is_ok()
+         
+        """
+        #stuff to get working later
+        if 1 == 2:
+            if not resp:
+                self.util.raise_error( "HTTPError", "Failed to get a response from the server during put" )
+
+            print "about to make draft"
+            review_request = Resource.DraftReviewRequest( resp )
+            print "draft made"
+            
+            if not review_request or not review_request.is_ok():
+                self.util.raise_error( "ObjectCreationError", "Failed to make an update review request object" )
+                
+            return review_request
+        """           
+
+    def update_review_request( self, changes ):
+        """update_review_request( self, changes ):
+        
+        Trys to update the current review request with the specified changes.
+        self.current must be ethier a ReviewRequest or DraftReviewRequest type
+        Resource.  Only changes that can effect a ReviewRequest will be
+        made.
+        
+        Parameters:
+            changes: a dictionary of changes to be made (ex. { 'status':'submitted' })
+
+        Returns: True/False whether update was successful
+        
+        """
+        if not isinstance(self.current, Resource.ReviewRequest) and \
+            not isinstance(self.current, Resource.DraftReviewRequest):
+                return False  
+        
+        review_request_url = None
+        rsp = None
+        try:
+            if isinstance(self.current, Resource.ReviewRequest):
+                review_request_url = self.current.url()
+            else:
+                review_request_url = self.current.parent_url()
+
+            rsp = self.interface.put( review_request_url, changes )
+            self.current = Resource.ReviewRequest( rsp )
+        except urllib2.HTTPError, e:
+            print e
+            self.util.raise_error( "HTTPError", "Failed on update" )
+
+        return self.current.is_ok()
+
+    def publish_review_request(self):
+        """
+        Attempts to publish the current review request.
+
+        Returns: True/False whether the draft is published or not
+        """ 
+        return self.update_draft_review_request( {'public':'true'} )
+
+    def close_review_request(self):
+        """
+        Attempts to close the current review request.
+
+        Returns: True/False whether the draft is published or not
+        """ 
+        return self.update_review_request( {'status':'submitted'} )
+
+    def delete_review_request( self, url ):
+        """delete_review_request( self, url ):
+        
+        Theoretically works (probably), if you have the right permissions. 
+        
+        """
+    
+        self.current = url
+        
+        review_request = None
+        resp = None
+        success = False
+        
+        try:
+            resp = self.delete( self.current )
+        except urllib2.HTTPError, e:
+            print e
+            self.util.raise_error( "HTTPError", "Failed on delete: " + e.code() )
