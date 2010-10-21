@@ -1,20 +1,22 @@
-import urllib2
-import urllib
 import cookielib
 import getpass
-import mimetools
 from rbtools import get_package_version, get_version_string
+import mimetools
+import urllib
+import urllib2
+
 try:
     from json import loads as json_loads
 except ImportError:
     from simplejson import loads as json_loads
 
-
 DEBUG = False
+
 
 def debug(str):
     if DEBUG:
         print ">>>> %s" % str
+
 
 class RequestWithMethod(urllib2.Request):
     """
@@ -27,7 +29,7 @@ class RequestWithMethod(urllib2.Request):
         Parameters:
             method   - the HTTP request method (ie. POST, PUT, GET, DELETE)
             url      - the address to make the request on
-            data     - the data to be used as the body of the request.  This 
+            data     - the data to be used as the body of the request.  This
                        should be un-encoded and in a dict key:value format.
             headers  - the data to be used in the header of the request.  This
                        should be un-encoded and in a dict key:value format.
@@ -70,12 +72,13 @@ class ServerInterface(object):
     tracks cookie information.
     """
 
-    def __init__(self, cookie_file = None):
+    def __init__(self, cookie_file=None):
         self.cookie_file = cookie_file
         self.cookie_jar = cookielib.MozillaCookieJar(self.cookie_file)
         cookie_handler = urllib2.HTTPCookieProcessor(self.cookie_jar)
         opener = urllib2.build_opener(cookie_handler)
-        opener.addheaders = [('User-agent', 'RBTools/' + get_package_version())]
+        opener.addheaders = [ \
+            ('User-agent', 'RBTools/' + get_package_version())]
         urllib2.install_opener(opener)
 
     def process_error(self, http_status, data):
@@ -87,8 +90,9 @@ class ServerInterface(object):
             if rsp['stat'] == 'fail':
                 raise APIError(http_status, rsp['err']['code'], rsp,\
                     rsp['err']['msg'])
-	    #else, although an HTTP error was raised the request to the RB server
-            #was successful.  An example of this is an HTTP redirect (303)     
+            #else, although an HTTP error was raised the request to the RB
+            #server was successful.  An example of this is an HTTP redirect
+            #(error code 303)
         except ValueError:
             pass
             #debug("Got HTTP error: %s: %s" % (http_status, data))
@@ -103,16 +107,16 @@ class ServerInterface(object):
                           PUT, and DELETE
             url         - the url to make the request to
             fields      - any data to be specified in the request.  This data
-                          should be stored in a dict of key:value pairs 
+                          should be stored in a dict of key:value pairs
             files       - any files to be specified in the request.  This data
-                          should be stored in a dict of key:dict, filename:value
-                          and content:value structure
+                          should be stored in a dict of key:dict,
+                          filename:value and content:value structure
             return_json - a boolean to specify the format of the data to be
-                          returned.  If this value is set to False xml is 
+                          returned.  If this value is set to False xml is
                           returned.
 
         Returns:
-            The response from the server in the format specified.  For more 
+            The response from the server in the format specified.  For more
             information view the ReviewBoard WebAPI Documentation.
         """
         content_type, body = self._encode_multipart_formdata(fields, files)
@@ -125,7 +129,7 @@ class ServerInterface(object):
             headers['Accept'] = 'application/xml'
 
         if not self._valid_method(method):
-            raise APIError(APIError.INVALID_REQUEST_METHOD, 
+            raise APIError(APIError.INVALID_REQUEST_METHOD,
                 'An invalid HTTP method was used')
 
         try:
@@ -142,9 +146,11 @@ class ServerInterface(object):
             # Re-raise so callers can interpret it.
             raise e
 
-    def _request2(self, method, url, fields=None, files=None, return_json=True):
+    def _request2(self, method, url, \
+        fields=None, files=None, return_json=True):
         """
-        WORK IN PROGRESS - SAME AS _request BUT USING A DIFFERENT METHOD TO ENCODE
+        WORK IN PROGRESS - SAME AS _request BUT USING A DIFFERENT METHOD
+        TO ENCODE
 
         Encodes the input fields and files and performs an HTTP request to the
         specified url using the specified method.  Any cookies set are stored.
@@ -154,16 +160,16 @@ class ServerInterface(object):
                           PUT, and DELETE
             url         - the url to make the request to
             fields      - any data to be specified in the request.  This data
-                          should be stored in a dict of key:value pairs 
+                          should be stored in a dict of key:value pairs
             files       - any files to be specified in the request.  This data
-                          should be stored in a dict of key:dict, filename:value
-                          and content:value structure
+                          should be stored in a dict of key:dict,
+                          filename:value and content:value structure
             return_json - a boolean to specify the format of the data to be
-                          returned.  If this value is set to False xml is 
+                          returned.  If this value is set to False xml is
                           returned.
 
         Returns:
-            The response from the server in the format specified.  For more 
+            The response from the server in the format specified.  For more
             information view the ReviewBoard WebAPI Documentation.
         """
         if fields:
@@ -175,12 +181,11 @@ class ServerInterface(object):
             'Content-Length': str(len(body))
         }
 
-
         if not return_json:
             headers['Accept'] = 'application/xml'
 
         if not self._valid_method(method):
-            raise APIError(APIError.INVALID_REQUEST_METHOD, 
+            raise APIError(APIError.INVALID_REQUEST_METHOD,
                 'An invalid HTTP method was used')
 
         try:
@@ -214,7 +219,7 @@ class ServerInterface(object):
         Make an HTTP POST on the specified url with the specified data,
         returning either json or xml
         """
-        return self._request('POST', url, fields, files, return_json) 
+        return self._request('POST', url, fields, files, return_json)
 
     def put(self, url, fields, files=None, return_json=True):
         """
@@ -225,12 +230,12 @@ class ServerInterface(object):
 
     def _encode_multipart_formdata(self, fields=None, files=None):
         """
-        Encodes data for use in an HTTP request. 
+        Encodes data for use in an HTTP request.
 
         Paramaters:
-            fields - the fields to be encoded.  This should be a dict in a 
+            fields - the fields to be encoded.  This should be a dict in a
                      key:value format
-            files  - the files to be encoded.  This should be a dict in a 
+            files  - the files to be encoded.  This should be a dict in a
                      key:dict, filename:value and content:value format
         """
         BOUNDARY = mimetools.choose_boundary()

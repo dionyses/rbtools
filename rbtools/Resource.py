@@ -1,5 +1,6 @@
-import string
 import ServerInterface
+import string
+
 try:
     from json import loads as json_loads
 except ImportError:
@@ -19,9 +20,10 @@ class ResourceError(Exception):
         code_str += self.msg
         return code_str
 
+
 class Resource(object):
     """
-    Class used to represent a resource 
+    Class used to represent a resource
     """
     def __init__(self, resource, is_json=True):
         self._url = None
@@ -35,7 +37,7 @@ class Resource(object):
             #Preform deserialization for xml
             pass
 
-        if len(self.data) > 1:  
+        if len(self.data) > 1:
             self._url = self.get_links()['self']['href']
         else:
             self._url = "There is no url associated with this resource."
@@ -48,7 +50,7 @@ class Resource(object):
 
     def parent_url(self):
         remove_index = string.rfind(self._url, '/', 0, len(self._url) - 1)
-        return self._url[0:remove_index+1] 
+        return self._url[0:remove_index + 1]
 
     def is_ok(self):
         """
@@ -74,13 +76,13 @@ class Resource(object):
         """
         Attempts to retrieve the field mapped by the key_list.
         If there is no value found under the specified key_list an INVALID_KEY
-        error is raised. 
+        error is raised.
 
         Parameters:
             key_list - the key(s) which map to a value to be obtained.
                        key_list can be a single (non-list) key, or any list
                        of keys to a set of nested dicts, in order of retrieval.
-        
+
         Returns:
             The field mapped to by the key_list.
         """
@@ -92,7 +94,7 @@ class Resource(object):
                     field = field.get(key)
 
                     if field == None:
-                        break                
+                        break
         else:
             field = self.data.get(key_list)
 
@@ -126,6 +128,7 @@ class Resource(object):
             raise ResourceError(ResourceError.INVALID_KEY, 'The resource could'
                 ' not retrieve the link %s' % link_name)
 
+
 class ReviewRequest(Resource):
     """
     Class which specifically deals with /api/review-request/ type resources.
@@ -142,6 +145,7 @@ class ReviewRequest(Resource):
     def draft_url(self):
         return self.get_link('draft')['href']
 
+
 class DraftReviewRequest(Resource):
     """
     Class which specifically deals with /api/review-request/<num>/draft/ type
@@ -155,4 +159,3 @@ class DraftReviewRequest(Resource):
         Overriden specifically for a DraftReviewRequest.
         """
         return self.get_field(['draft', 'links'])
-
