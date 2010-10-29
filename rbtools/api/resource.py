@@ -116,19 +116,40 @@ class Resource(ResourceBase):
     """
     An object which specifically deals with resources.
     """
-    def __init__(self, server_interface, create_url, resource_type):
+    def __init__(self, server_interface, url, resource_type):
         ResourceBase.__init__(self, server_interface)
-        self.create_url = create_url
+        self.url = url
         self.resource_type = resource_type
 
     def save(self):
-        self.resource_string = self.server_interface.post(self.create_url,
+        if not self.server_interface.is_logged_in():
+            raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
+                'interface must be logged in.')
+
+        self.resource_string = self.server_interface.post(self.url,
                                                           self.data)
         self.data = json_loads(self.resource_string)
 
         if not self.is_ok():
             raise ResourceError(ResourceError.REQUEST_FAILED, 'The resource '
                 'requested could not be retrieved - from save.')
+
+    def load(self):
+        if not self.server_interface.is_logged_in():
+            raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
+                'interface must be logged in.')
+
+        try:
+            self.resource_string = self.server_interface.get(self.url)
+            self.data = json_loads(self.resource_string)
+        except serverinterface.APIError, e:
+            print e
+        except urllib2.HTTPError, e:
+            print e
+
+        if not self.is_ok():
+            raise ResourceError(ResourceError.REQUEST_FAILED, 'The resource '
+                'requested could not be retrieved.')
 
     def set_field(self, field, value):
         self.data[field] = value
@@ -148,6 +169,8 @@ class ResourceList(ResourceBase):
         self.url = url
         self.resource_type = 'resource_list'
         self.child_resource_type = None
+        self.child_resource_url = None
+        self.field_id = None
         self._index = -1
 
         self._load()
@@ -170,14 +193,44 @@ class ResourceList(ResourceBase):
                 'requested could not be retrieved.')
 
         for elem in self.data:
-            if elem not in ['stat', 'links', 'total_results']:
+            if elem not in ['stat', 'links', 'total_results', 'uri_templates']:
                 self.child_resource_type = elem
 
         if self.child_resource_type is None:
             print "error getting the type of child resource"
+        else:
+            try:
+                self.child_resource_url = self.get_field(['uri_templates',
+                                                       self.child_resource_type,
+                                                       'href'])
+            except ResourceError, e:
+                print e
+                print "pretending..."
+                self.child_resource_url = self.get_field(['links', 'self',
+                                                          'href'])
+                self.child_resource_url += '{some_id_field}/'
+                print self.child_resource_url
 
     def create(self):
-        return Resource(self.server_interface, self.get_link('create'), self.child_resource_type)    
+        if self.child_resource_type is None:
+            #there is no child resource type so 'create' is meaningless
+            raise ResourceError(ResourceError.NO_CHILD_RESOURCE, 'The '
+                'request cannot be made because this resource list has '
+                'no child type.')
+        else:
+            return Resource(self.server_interface, self.get_link('create'),
+                            self.child_resource_type)    
+
+    def get(self, field_id):
+        split_url = r_section_erase(self.child_resource_url, '{', '}')
+
+        if split_url is None:
+            raise ResourceError(ResourceError.INVALIDE_CHILD_RESOURCE_URL,
+                "couldn't parse the {id} section from the child resource url")
+
+        return Resource(self.server_interface, split_url[0] + '%d' % field_id +
+                        split_url[1], self.child_resource_type)
+        
 
     def __iter__(self):
         return self
@@ -191,10 +244,22 @@ class ResourceList(ResourceBase):
             self._index = -1
             raise StopIteration
         else:
-            return self.data[self.child_resource_type][self._index]
+            if self.child_resource_type is None:
+                #there is no child resource type so iterating is meaningless
+                raise ResourceError(ResourceError.NO_CHILD_RESOURCE, 'The '
+                    'request cannot be made because this resource list has '
+                    'no child type.')
+            else:
+                return self.data[self.child_resource_type][self._index]
 
     def __len__(self):
-        return len(self.data[self.child_resource_type])
+        if self.child_resource_type is None:
+            #there is no child resource type so iterating is meaningless
+            raise ResourceError(ResourceError.NO_CHILD_RESOURCE, 'The '
+                'request cannot be made because this resource list has '
+                'no child type.')
+        else: 
+           return len(self.data[self.child_resource_type])
 
     def __contains__(self, key):
         contains = False
@@ -207,4 +272,28 @@ class ResourceList(ResourceBase):
         return contains
 
     def __getitem__(self, position):
-        return self.data[self.child_resource_type][position]    
+        if self.child_resource_type is None:
+            #there is no child resource type so indexing is meaningless
+            raise ResourceError(ResourceError.NO_CHILD_RESOURCE, 'The '
+                'request cannot be made because this resource list has '
+                'no child type.')
+        else: 
+            return self.data[self.child_resource_type][position]
+
+
+def r_section_erase(string, left_marker, right_marker):
+    left_pos = string.rfind(left_marker)
+    right_pos = string.rfind(right_marker)
+
+    #if the left or right marker cannot be found
+    if left_pos == -1 or right_pos == -1:
+        return None
+    #if the markers are found but positioned incorrectly
+    elif left_pos > right_pos:
+        return None
+    #if the left marker extends past the right marker
+    elif left_pos + len(left_marker) > right_pos + len(right_marker):
+        return None
+
+    out = [string[0:left_pos], string[right_pos+len(right_marker):]]
+    return out

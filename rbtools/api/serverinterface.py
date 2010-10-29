@@ -162,7 +162,6 @@ class ServerInterface(object):
         try:
             debug("_requesting with the header: %s" % headers)
             debug("and data: %s" % body)
-            print "\n%s\n" % url
             r = RequestWithMethod(method, url, body, headers)
             resource = urllib2.urlopen(r)
             self.cookie_jar.save(self.cookie_file)
