@@ -13,93 +13,94 @@ import sys
 import tempfile
 import urllib
 import urllib2
-import Repository
+
 from optparse import OptionParser
 from tempfile import mkstemp
 from urlparse import urljoin, urlparse
 
+import Repository
 
-class RBUtilities:
-    """
-    
-    A Utility class that performs such tasks as finding out environment information, making system calls, and raising
-    warnings and errors
-    
+class RBUtilities(object):
+    """A collection of utility functions
+
+    A Utility class that performs such tasks as finding out environment
+    information, making system calls, and raising warnings and errors
     """
 
     ERR_NO = 1
 
     log_file = None
 
+    def __init__(self, log_file='rbproblems.log'):
 
-    def __init__( self, log_file = 'rbproblems.log' ):
-        """__init__( self, log_file )
-        
-        Initializes the utility class
-        
-        Parameters:
-            log_file, the file warnings and errors are logged in. set to None to prevent logging. DEFAULTS: 'rbproblems.log'
-            
-        """
-        
         self.log_file = log_file
-        
 
-    def get_repository( self, url = None, repo_types = ['svn', 'cvs', 'git', 'hg', 'perforce', 'clearcase'], additional_repos = []):
-        """get_repository( self, url, repo_types, additional_repos )
+    def get_repository(self, url=None, repo_types=['svn', 'cvs', 'git', \
+                        'hg', 'perforce', 'clearcase'], additional_repos=[]):
+        """Returns the repository
         
-        Finds the correct type of Repository and returns it.
+        TODO make this not suck
         
-        Parameters:
-            url, the url of the server. Defaults to None, but is required
-            repo_types, types of repo this function would test. It builds
-                    the objects, passing them the url as a parameter. Defaults
-                    to trying svn, cvs, git, mercurial, perforce and clearcase
-            additional_repos, a list of additional Repository objects (already
-                    created) to try (they will be tried first). This is separated
-                    from repo_types because repo_types autoinitializes the
-                    Repository objects, which it couldn't do for types it
-                    doesn't know. Defaults to []
-        
-        Returns a Repository object of the correct type or None, if none are found
-                                            
+        Using a list of repositories provided by the user, attempts to find
+        the type of repository being used by the user
         """
-        
+
         if not url:
-            self.raise_error( "missingRequiredParameter", "get_repository requires url to be passed as a parameter")
-    
+            self.raise_error("missingRequiredParameter", \
+                    "get_repository requires url to be passed as a parameter")
+
         possible_repos = additional_repos
-    
+
+        #TODO: use a dictionary
+        """HINT on how
+        It would be better to have a lookup map somewhere outside the function, like:
+
+        repository_types = {
+            'svn': Repository.SVNRepository,
+            'cvs': Repository.CVSRepository,
+        }
+
+        Then you can do:
+
+        if type in repository_types:
+            possible_repos.append(repository_types[tpe](url, self))
+        else:
+            self.raise_warning(...)
+        """
         for type in repo_types:
             type = type.lower()
-        
+
             if type == 'svn':
-                possible_repos.append( Repository.SVNRepository( url, self ) )
+                possible_repos.append(Repository.SVNRepository(url, self))
             elif type == 'cvs':
-                possible_repos.append( Repository.CVSRepository( url, self ) )
+                possible_repos.append(Repository.CVSRepository(url, self))
             elif type == 'git':
-                possible_repos.append( Repository.GitRepository( url, self ) )
+                possible_repos.append(Repository.GitRepository(url, self))
             elif type == 'hg' or type == 'mercurial':
-                possible_repos.append( Repository.MercurialRepository( url, self ) )
+                possible_repos.append(Repository.MercurialRepository(url, \
+                                                                    self))
             elif type == 'perforce':
-                possible_repos.append( Repository.PerforceRepository( url, self ) )
+                possible_repos.append(Repository.PerforceRepository(url, \
+                                                                    self))
             elif type == 'clearcase' or type == 'clear case':
-                possible_repos.append( Repository.ClearCaseRepository( url, self ) )
+                possible_repos.append(Repository.ClearCaseRepository(url, \
+                                                                    self))
             else:
-                self.raise_warning( "UnreckognizedType", type + "is not a recognized type. If it is a Repository type, create it yourself and pass it in using additional_repos" )
-        
+                self.raise_warning("UnreckognizedType", type + "is not a \
+recognized type. If it is a Repository type, create it yourself and pass it \
+in using additional_repos")
+
         repo = None
-        
+
         for rep in possible_repos:
 
             if rep.get_info():
                 repo = rep
                 break
-            
-        return repo
-    
 
-    def make_tempfile( self ):
+        return repo
+
+    def make_tempfile(self):
         """
         Creates a temporary file and returns the path. The path is stored
         in an array for later cleanup.
@@ -108,27 +109,25 @@ class RBUtilities:
         os.close(fd)
         tempfiles.append(tmpfile)
         return tmpfile
-                
 
-    def check_install( self, command):
+    def check_install(self, command):
         """
-        Try executing an external command and return a boolean indicating whether
-        that command is installed or not.  The 'command' argument should be
-        something that executes quickly, without hitting the network (for
-        instance, 'svn help' or 'git --version').
+        Try executing an external command and return a boolean indicating
+        whether that command is installed or not.  The 'command' argument
+        should be something that executes quickly, without hitting the network
+        (for instance, 'svn help' or 'git --version').
         """
         try:
             p = subprocess.Popen(command.split(' '),
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
             return True
         except OSError:
             return False
 
-
-    def execute( self, command, env=None, split_lines=False, ignore_errors=False,
-            extra_ignore_errors=(), translate_newlines=True):
+    def execute(self, command, env=None, split_lines=False, \
+        ignore_errors=False, extra_ignore_errors=(), translate_newlines=True):
         """
         Utility function to execute a command and return the output.
         """
@@ -175,9 +174,10 @@ class RBUtilities:
 
         return data
 
-
     def check_gnu_diff():
-        """Checks if GNU diff is installed, and informs the user if it's not."""
+        """
+        Checks if GNU diff is installed, and informs the user if it's not.
+        """
         has_gnu_diff = False
 
         try:
@@ -199,7 +199,6 @@ class RBUtilities:
                 sys.stderr.write('\n')
 
             self.die()
-    
 
     def die(msg=None):
         """
@@ -215,82 +214,71 @@ class RBUtilities:
                 pass
 
         if msg:
-            self.output( msg )
+            self.output(msg)
 
         sys.exit(1)
-        
 
-    def output( self, text = '' ):
-        """output( self, text )
-        
-        outputs text
-        
-        Parameters:
-            text, the text being outputted. Defaults: ''
-            
+    def output(self, text=''):
+        """Outputs text
+
+        This base implementation merely using the print command
         """
-        
+
         print text
-        
-    def input( self, text = '', secure = False ):
-        if secure:
-            return getpass.getpass( text )
-        else:
-            return raw_input( text )
-        
 
-    def raise_error( self, errorType = 'UnknownErrorType', errorMessage = 'No message', logError = True ):
-        """raise_error( self, errorType, errorMessage, logError )
+    def input(self, text='', secure=False):
+        """Inputs text
         
-        Logs and reports an error, then exits the program.
-        NOTE: Under the default implementation, the only difference between an error and a warning,
-            is that errors call exit afterward.
-        
-        Parameters
-            errorType, the kind of error that has occurred. Defaults: 'UnknownErrorType'
-            errorMessage, A message explaining what caused the error. Defaults: 'No message'
-            logError, whether the error should be logged. Defaults: True
-        
+        This base implementation merely uses raw_input (and getpass for
+        secure inputs
         """
-    
-        self.output( 'Error-' + errorType + ': ' + errorMessage )
+        
+        if secure:
+            return getpass.getpass(text)
+        else:
+            return raw_input(text)
+
+    def raise_error(self, errorType='UnknownErrorType', \
+                          errorMessage='No message', logError=True):
+        """Raises an error
+        
+        In the base implementation, this logs the error, prints it using
+        output, and then exits
+        """
+
+        self.output('Error-' + errorType + ': ' + errorMessage)
 
         if logError:
-            file = open( self.log_file, 'a' )
-            
-            if not file:
-                self.output( 'Further Error, could not open logfile (located at "' + self.log_file + '").' )
-                
-            file.write('Error,' + errorType + ',' + errorMessage)
-            
-            file.close()
-            
-        exit(self.ERR_NO)
-        
+            file = open(self.log_file, 'a')
 
-    def raise_warning( self, warningType = 'UnknownWarningType', warningMessage = 'No message', logWarning = True ):
-        """raise_error( self, warningType, warningMessage, logWarning
-        
-        Logs and reports a warning.
-        NOTE: Under the default implementation, the only difference between an error and a warning,
-            is that errors call exit afterward.
-        
-        Parameters
-            warningType, the kind of warning that has occurred. Defaults: 'UnknownErrorType'
-            warningMessage, A message explaining what caused the warning. Defaults: 'No message'
-            logWarning, whether the warning should be logged. Defaults: True
-        
-        """
-    
-        self.output( 'Warning-' + warningType + ': ' + warningMessage )
-        
-        if logWarning:
-            file = open( self.log_file, 'a' )
-            
             if not file:
-                self.output( 'Error, could not open logfile (located at "' + self.log_file + '").' )
+                self.output('Further Error, could not open logfile (located \
+at "' + self.log_file + '").')
+
+            file.write('Error,' + errorType + ',' + errorMessage)
+
+            file.close()
+
+        exit(self.ERR_NO)
+
+    def raise_warning(self, warningType='UnknownWarningType', \
+                            warningMessage='No message', logWarning=True):
+        """Raises a warning
+        
+        In this base implementation, this logs the warning, and prints it
+        using output. This function only differs from raise_error by the
+        fact that raise_warning does not exit afterwardl
+        """
+
+        self.output('Warning-' + warningType + ': ' + warningMessage)
+
+        if logWarning:
+            file = open(self.log_file, 'a')
+
+            if not file:
+                self.output('Error, could not open logfile (located at "' + \
+                                                    self.log_file + '").')
                 exit(ERR_NO)
-                
+
             file.write('Error,' + warningType + ',' + warningMessage)
-            
             file.close()
