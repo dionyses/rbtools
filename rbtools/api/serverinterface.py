@@ -73,13 +73,13 @@ class ServerInterface(object):
     LOGIN_PATH = 'api/json/accounts/login/'
 
     def __init__(self, server_url, cookie_file=".cookie"):
-        self.server_url     = server_url
-        self.cookie_file    = cookie_file
-        self.cookie_jar     = cookielib.MozillaCookieJar(self.cookie_file)
+        self.server_url = server_url
+        self.cookie_file = cookie_file
+        self.cookie_jar = cookielib.MozillaCookieJar(self.cookie_file)
         self.cookie_handler = urllib2.HTTPCookieProcessor(self.cookie_jar)
-        self.user           = None
+        self.user = None
         opener = urllib2.build_opener(self.cookie_handler)
-        opener.addheaders = [ 
+        opener.addheaders = [
             ('User-agent', 'RBTools/' + get_package_version())
         ]
         urllib2.install_opener(opener)
@@ -110,11 +110,11 @@ class ServerInterface(object):
                 self.user = username
 
             if password is None:
-               password = getpass.getpass('Password: ')
+                password = getpass.getpass('Password: ')
 
             try:
                 resp = self.post(self.server_url + self.LOGIN_PATH,
-                                 {'username':self.user, 'password':password})
+                                {'username': self.user, 'password': password})
                 data = json_loads(resp)
 
                 if data['stat'] == 'ok':
@@ -123,7 +123,7 @@ class ServerInterface(object):
             except APIError, e:
                 print e
             except urllib2.HTTPError, e:
-                print e 
+                print e
 
         return False
 

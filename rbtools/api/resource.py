@@ -49,10 +49,10 @@ class ResourceBase(object):
         reason, false is returned.
         """
         if not self._queryable:
-            raise ResourceError(ResourceError.UNLOADED_RESOURCE, 'The resource '
-                'has not been loaded yet.  You must save() or _load() the '
+            raise ResourceError(ResourceError.UNLOADED_RESOURCE, 'The resource'
+                ' has not been loaded yet.  You must save() or _load() the '
                 'resource before attempting to pull data from it.')
-        else:        
+        else:
             return self.data['stat'] == 'ok'
 
     def get_field(self, key_list):
@@ -74,8 +74,8 @@ class ResourceBase(object):
             The field mapped to by the key_list.
         """
         if not self._queryable:
-            raise ResourceError(ResourceError.UNLOADED_RESOURCE, 'The resource '
-                'has not been loaded yet.  You must save() or _load() the '
+            raise ResourceError(ResourceError.UNLOADED_RESOURCE, 'The resource'
+                ' has not been loaded yet.  You must save() or _load() the '
                 'resource before attempting to pull data from it.')
         else:
             if isinstance(key_list, list):
@@ -91,8 +91,8 @@ class ResourceBase(object):
                 field = self.data.get(key_list)
 
             if field == None:
-                raise ResourceError(ResourceError.INVALID_KEY, '%s is not a valid '
-                    'key for this resource.' % key_list)
+                raise ResourceError(ResourceError.INVALID_KEY, '%s is not a '
+                    'valid key for this resource.' % key_list)
             else:
                 return field
 
@@ -111,6 +111,7 @@ class ResourceBase(object):
             raise ResourceError(ResourceError.INVALID_KEY, 'The resource could'
                 ' not retrieve the link %s' % link_name)
 
+
 class Resource(ResourceBase):
     """
     An object which specifically deals with resources.
@@ -121,7 +122,7 @@ class Resource(ResourceBase):
         way a resource is loaded is dependant on this.
 
         If a resource is "created" it is not POSTed to the server until save()
-        is called.  
+        is called.
 
         If on the other hand the resource is "got" then it already exists on
         the server.  In this case, after being instantiated _load() should be
@@ -135,7 +136,7 @@ class Resource(ResourceBase):
     def _determine_resource_type(self):
         """
         Attempts to determine and set the resource type.
-        """        
+        """
         #If the resource has been loaded
         if self._queryable:
             for elem in self.data:
@@ -145,8 +146,8 @@ class Resource(ResourceBase):
                     self.resource_type = elem
         #Otherwise self.data has not be populated
         else:
-            raise ResourceError(ResourceError.UNLOADED_RESOURCE, 'The resource '
-                'has not been loaded yet.  You must save() or _load() the '
+            raise ResourceError(ResourceError.UNLOADED_RESOURCE, 'The resource'
+                ' has not been loaded yet.  You must save() or _load() the '
                 'resource before attempting to pull data from it.')
 
     def save(self):
@@ -166,7 +167,7 @@ class Resource(ResourceBase):
             print e
         except urllib2.HTTPError, e:
             print e
-    
+
         if not self.is_ok():
             raise ResourceError(ResourceError.REQUEST_FAILED, 'The resource '
                 'requested could not be retrieved - from save.')
@@ -260,7 +261,7 @@ class Resource(ResourceBase):
             #Now GET the resource to find out if it is a resource list
             #or a resource
             resp = self.server_interface.get(self.get_link(link))
-            data_list = json_loads(resp)            
+            data_list = json_loads(resp)
 
             #If we are get_or_creating a ResourceList
             if is_resource_list(data_list):
@@ -275,6 +276,7 @@ class Resource(ResourceBase):
             print e
         except urllib2.HTTPError, e:
             print e
+
 
 class ResourceList(ResourceBase):
     """
@@ -325,8 +327,8 @@ class ResourceList(ResourceBase):
         #Otherwise it is not a root
         else:
             #Determine and set the child url template for the resource list
-            self._determine_child_url()        
-   
+            self._determine_child_url()
+
     def _determine_child_url(self):
         """
         Determine and set the child resource url.
@@ -334,7 +336,7 @@ class ResourceList(ResourceBase):
         try:
             #If this is the root resource list
             if self._is_root:
-                #The child resource url comes from the links 
+                #The child resource url comes from the links
                 self.child_resource_url = self.get_link(self.resource_type)
             #Otherwise it is a normal list
             else:
@@ -358,7 +360,7 @@ class ResourceList(ResourceBase):
         resource type can be changed then once it is set the child resource
         url is updated.  If this is not allowed an IMMUTABLE_RESOURCE_TYPE
         error is raised.
-        
+
         Parameters:
             resource_type - the type of resource to set.
         """
@@ -391,7 +393,7 @@ class ResourceList(ResourceBase):
                 ' request cannot be made because this resource list\'s child '
                 'is not creatable.')
         else:
-            return Resource(self.server_interface, self.get_link('create'))    
+            return Resource(self.server_interface, self.get_link('create'))
 
     def get(self, field_id):
         """
@@ -468,7 +470,7 @@ class ResourceList(ResourceBase):
     def __len__(self):
         if self._is_root:
             return len(self.get_links())
-        else: 
+        else:
             return len(self.data[self.resource_type])
 
     def __contains__(self, key):
@@ -511,6 +513,8 @@ class ResourceList(ResourceBase):
 """
 Auxillary methods not specific to any resource
 """
+
+
 def r_section_erase(string, left_marker, right_marker):
     """
     Attempts to return the left and right sides of the specified string
@@ -532,7 +536,7 @@ def r_section_erase(string, left_marker, right_marker):
         If either the left or right markers cannot be found, or the section
         they define is not "left-to-right" and "perfectly bounded", then
         None is returned.
-    
+
         left-to-right: a set of left and right markers (delimiters) is said to
                        be left-to-right if the position of the start of the
                        left marker is strictly less than the position of the
@@ -543,7 +547,7 @@ def r_section_erase(string, left_marker, right_marker):
                            and if the left marker does not surpass the right.
                            In other words, if the position of the left marker
                            plus its length is greater than the position of the
-                           right marker plus its length, then they are not 
+                           right marker plus its length, then they are not
                            perfectly bounded.  Otherwise, they are.
     """
     left_pos = string.rfind(left_marker)
@@ -559,8 +563,9 @@ def r_section_erase(string, left_marker, right_marker):
     elif left_pos + len(left_marker) > right_pos + len(right_marker):
         return None
 
-    out = [string[0:left_pos], string[right_pos+len(right_marker):]]
+    out = [string[0:left_pos], string[right_pos + len(right_marker):]]
     return out
+
 
 def is_resource_list(data):
     """
@@ -570,5 +575,5 @@ def is_resource_list(data):
     for n in data:
         if n == 'total_results':
             return True
-       
+
     return False
