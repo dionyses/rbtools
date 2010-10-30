@@ -1,0 +1,117 @@
+Date: Fri, 08 Oct 2010 17:28:24 GMT
+Server: Apache/2.2.8 (Ubuntu) mod_fastcgi/2.4.6 mod_python/3.3.1 Python/2.5.2
+Content-Length: 14
+Content-Language: en-us
+Expires: Fri, 08 Oct 2010 17:28:24 GMT
+Vary: Cookie,Accept-Language
+Last-Modified: Fri, 08 Oct 2010 17:28:24 GMT
+ETag: "b6e92daf146c071e4f744c5eb0f38c4b"
+Cache-Control: max-age=0
+Content-Type: application/json
+Set-Cookie:  rbsessionid=e1d11cd1a14e38b17cd572fff5b72888; expires=Sat, 08-Oct-2011 17:28:24 GMT; Max-Age=31536000; Path=/
+Connection: close
+
+{"stat": "ok"}
+Date: Fri, 08 Oct 2010 17:28:24 GMT
+Server: Apache/2.2.8 (Ubuntu) mod_fastcgi/2.4.6 mod_python/3.3.1 Python/2.5.2
+Content-Length: 1527
+Content-Language: en-us
+Expires: Fri, 08 Oct 2010 17:28:24 GMT
+Vary: Cookie,Accept-Language,Accept-Encoding
+Last-Modified: Fri, 08 Oct 2010 17:28:24 GMT
+ETag: "9ed82b3be50d6c65a1e793af444557dd"
+Cache-Control: max-age=0
+Content-Type: application/json
+Connection: close
+
+{
+	"stat": "ok",
+	"review_request": {
+		"status": "submitted",
+		"last_updated": "2010-10-08 10:27:17",
+		"description": "aoeu",
+		"links": {
+			"diffs": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/diffs\/", "method": "GET"},
+			"repository": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/repositories\/2\/", "method": "GET", "title": "Navi"},
+			"self": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/", "method": "GET"},
+			"update": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/", "method": "PUT"},
+			"last_update": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/last-update\/", "method": "GET"},
+			"reviews": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/reviews\/", "method": "GET"},
+			"draft": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/draft\/", "method": "GET"},
+			"submitter": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/users\/dionyses\/", "method": "GET", "title": "dionyses"},
+			"screenshots": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/screenshots\/", "method": "GET"},
+			"delete": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4211\/", "method": "DELETE"}	
+		},
+		"target_groups": [],
+		"bugs_closed": [],
+		"changenum": null,
+		"target_people": [{
+			"href": "http:\/\/demo.reviewboard.org\/api\/users\/dionyses\/", "method": "GET", "title": "dionyses"}],
+		"testing_done": "aoeu",
+		"branch": "",
+		"id": 4211,
+		"time_added": "2010-10-07 22:39:59",
+		"summary": "aoeu",
+		"public": true
+	}
+}
+
+
+A DRAFT
+{
+	"stat": "ok",
+	"draft": {
+		"last_updated": "2010-10-13 10:25:26",
+		"description": "aoeu",
+		"target_people": [{
+			"href": "http:\/\/demo.reviewboard.org\/api\/users\/dionyses\/", "method": "GET", "title": "dionyses"
+		}],
+		"changedescription": "",
+		"target_groups": [],
+		"links": {
+			"draft_screenshots": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4239\/draft\/screenshots\/", "method": "GET"
+			},
+			"self": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4239\/draft\/", "method": "GET"
+			},
+			"review_request": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4239\/", "method": "GET", "title": "(no summary)"
+				},
+			"update": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4239\/draft\/", "method": "PUT"
+			},
+			"delete": {
+				"href": "http:\/\/demo.reviewboard.org\/api\/review-requests\/4239\/draft\/", "method": "DELETE"
+			}
+		},
+		"bugs_closed": [],
+		"testing_done": "aoeu",
+		"branch": "",
+		"id": 1116,
+		"summary": "aoeu",
+		"public": false
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
