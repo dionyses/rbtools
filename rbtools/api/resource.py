@@ -31,13 +31,14 @@ class ResourceBase(object):
     """
     Base class from which other Resource objects should inherit.
     """
-    def __init__(self, server_interface):
+    def __init__(self, server_interface, url_field_ids=None):
         self.url = None
         self.server_interface = server_interface
         self.resource_type = None
         self.resource_string = None
         self.data = {}
         self._queryable = False
+        self.url_field_ids = url_field_ids
 
     def __str__(self):
         return self.resource_string
@@ -128,8 +129,8 @@ class Resource(ResourceBase):
         the server.  In this case, after being instantiated _load() should be
         called on the resource to perform a GET to the server.
     """
-    def __init__(self, server_interface, url):
-        ResourceBase.__init__(self, server_interface)
+    def __init__(self, server_interface, url, url_field_ids=None):
+        ResourceBase.__init__(self, server_interface, url_field_ids)
         self.url = url
         self.updates = {}
 
@@ -177,6 +178,11 @@ class Resource(ResourceBase):
         #is set to the parent's create url.  Update this to self so that future
         #calls will go to the right place.
         self.url = self.get_link('self')
+
+        if self.url_field_ids:
+            self.url_field_ids = self.url_field_ids + [self.get_field('id')]
+        else:
+            self.url_field_ids = [self.get_field('id')]
 
     def _load(self):
         """
@@ -258,6 +264,15 @@ class Resource(ResourceBase):
             #First create the resource if it doesn't already exist by
             #performing a blank put to the url
             resp = self.server_interface.put(self.get_link(link), {})
+        except urllib2.HTTPError, e:
+            if e.code == 500:
+                pass    
+            else:
+                print e
+        except serverinterface.APIError, e:
+            print e
+
+        try:
             #Now GET the resource to find out if it is a resource list
             #or a resource
             resp = self.server_interface.get(self.get_link(link))
@@ -282,8 +297,8 @@ class ResourceList(ResourceBase):
     """
     An object which specifically deals with lists of resources.
     """
-    def __init__(self, server_interface, url):
-        ResourceBase.__init__(self, server_interface)
+    def __init__(self, server_interface, url, url_field_ids=None):
+        ResourceBase.__init__(self, server_interface, url_field_ids)
         self.url = url
         self.child_resource_url = None
         self.field_id = None
@@ -437,8 +452,15 @@ class ResourceList(ResourceBase):
 
             #Get the resource by creating the child resource url filled in with
             #the specified field_id
-            rsc = Resource(self.server_interface, split_url[0] +
-                            '%d' % field_id + split_url[1])
+            if self.url_field_ids:
+                rsc = Resource(self.server_interface,
+                               split_url[0] + '%d' % field_id + split_url[1],
+                               self.url_field_ids + [field_id])
+            else:
+                rsc = Resource(self.server_interface,
+                               split_url[0] + '%d' % field_id + split_url[1],
+                               [field_id])
+
             rsc._load()
             return rsc
 
