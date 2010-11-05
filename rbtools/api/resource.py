@@ -8,7 +8,7 @@ except ImportError:
 
 
 class ResourceError(Exception):
-    IMMUTABLE_RESOURCE_TYPE = 1
+    IMPROPER_RESOURCE_TYPE = 1
     INVALID_KEY = 2
     INVALID_CHILD_RESOURCE_URL = 3
     LOGIN_REQUIRED = 4
@@ -41,7 +41,10 @@ class ResourceBase(object):
         self.url_field_ids = url_field_ids
 
     def __str__(self):
-        return self.resource_string
+        if self.resource_string:
+            return self.resource_string
+        else:
+            return "Unloaded ResourceBase Object.. Please load before using."
 
     def is_ok(self):
         """
@@ -81,7 +84,6 @@ class ResourceBase(object):
         else:
             if isinstance(key_list, list):
                 field = self.data.get(key_list[0])
-
                 if field:
                     for key in key_list[1:]:
                         field = field.get(key)
@@ -111,6 +113,30 @@ class ResourceBase(object):
         except KeyError, e:
             raise ResourceError(ResourceError.INVALID_KEY, 'The resource could'
                 ' not retrieve the link %s' % link_name)
+
+    def _load(self):
+        if not self.server_interface.is_logged_in():
+            raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
+                'interface must be logged in.')
+
+        try:
+            self.resource_string = self.server_interface.get(self.url)
+            self.data = json_loads(self.resource_string)
+            self._queryable = True
+        except serverinterface.APIError, e:
+            print e
+        except urllib2.HTTPError, e:
+            print e
+
+        if not self.is_ok():
+            raise ResourceError(ResourceError.REQUEST_FAILED, 'The resource '
+                'requested could not be retrieved.')
+
+    def refresh(self):
+        """
+        Refreshes the resource from the server.
+        """
+        self._load()
 
 
 class Resource(ResourceBase):
@@ -151,6 +177,31 @@ class Resource(ResourceBase):
                 ' has not been loaded yet.  You must save() or _load() the '
                 'resource before attempting to pull data from it.')
 
+    def delete(self):
+        """
+        Deletes the current resource
+        """
+        if not self.server_interface.is_logged_in():
+            raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
+                'interface must be logged in.')
+
+        if self._queryable:
+            try:
+                self.resource_string = self.server_interface.delete(
+                    self.get_link('delete'))
+                self.data = json_loads(self.resource_string)
+                self._queryable = False
+            except serverinterface.APIError, e:
+                print e
+            except urllib2.HTTPError, e:
+                print e
+
+            if not self.is_ok():
+                raise ResourceError(ResourceError.REQUEST_FAILED, 'The '
+                    'resource requested could not be retrieved - from save.'
+                    '  The server response was: %s, %s' % (self.data['stat'],
+                    self.data['err']))
+
     def save(self):
         """
         Saves the current updates to the resource.
@@ -159,19 +210,23 @@ class Resource(ResourceBase):
             raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
                 'interface must be logged in.')
 
-        try:
-            self.resource_string = self.server_interface.post(self.url,
-                                                              self.updates)
-            self.data = json_loads(self.resource_string)
-            self._queryable = True
-        except serverinterface.APIError, e:
-            print e
-        except urllib2.HTTPError, e:
-            print e
+        already_loaded = self._queryable
+
+        #.. note:  removed try/except so that callers may deal with exceptions 
+        #try:
+        self.resource_string = self.server_interface.put(self.url,
+                                                         self.updates)
+        self.data = json_loads(self.resource_string)
+        self._queryable = True
+        #except serverinterface.APIError, e:
+            #print e
+        #except urllib2.HTTPError, e:
+            #print e
 
         if not self.is_ok():
             raise ResourceError(ResourceError.REQUEST_FAILED, 'The resource '
-                'requested could not be retrieved - from save.')
+                'requested could not be retrieved - from save.  The server '
+                'response was: %s, %s' % (self.data['stat'], self.data['err']))
 
         self._determine_resource_type()
         #If it is the first time save() is called on this resource then url
@@ -179,39 +234,18 @@ class Resource(ResourceBase):
         #calls will go to the right place.
         self.url = self.get_link('self')
 
-        if self.url_field_ids:
-            self.url_field_ids = self.url_field_ids + [self.get_field('id')]
-        else:
-            self.url_field_ids = [self.get_field('id')]
+        if not already_loaded:
+            if self.url_field_ids:
+                self.url_field_ids = self.url_field_ids + [self.get_field('id')]
+            else:
+                self.url_field_ids = [self.get_field('id')]
 
     def _load(self):
         """
         Loades the resource from the server.
         """
-        if not self.server_interface.is_logged_in():
-            raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
-                'interface must be logged in.')
-
-        try:
-            self.resource_string = self.server_interface.get(self.url)
-            self.data = json_loads(self.resource_string)
-            self._queryable = True
-        except serverinterface.APIError, e:
-            print e
-        except urllib2.HTTPError, e:
-            print e
-
-        if not self.is_ok():
-            raise ResourceError(ResourceError.REQUEST_FAILED, 'The resource '
-                'requested could not be retrieved.')
-
+        super(Resource, self)._load()
         self._determine_resource_type()
-
-    def refresh(self):
-        """
-        Refreshes the resource from the server.
-        """
-        self._load()
 
     def get_field(self, key_list):
         """
@@ -263,10 +297,10 @@ class Resource(ResourceBase):
         try:
             #First create the resource if it doesn't already exist by
             #performing a blank put to the url
-            resp = self.server_interface.put(self.get_link(link), {})
+            resp = self.server_interface.post(self.get_link(link), {})
         except urllib2.HTTPError, e:
             if e.code == 500:
-                pass    
+                pass
             else:
                 print e
         except serverinterface.APIError, e:
@@ -280,17 +314,84 @@ class Resource(ResourceBase):
 
             #If we are get_or_creating a ResourceList
             if is_resource_list(data_list):
-                return ResourceList(self.server_interface, self.get_link(link))
+                return ResourceList(self.server_interface,
+                                    self.get_link(link), self.url_field_ids)
             #If we are get_or_creating a Resource
             else:
                 #Then _load it before returning it
-                rsc = Resource(self.server_interface, self.get_link(link))
+                rsc = Resource(self.server_interface, self.get_link(link),
+                               self.url_field_ids)
                 rsc._load()
                 return rsc
         except serverinterface.APIError, e:
             print e
         except urllib2.HTTPError, e:
             print e
+
+
+class ReviewRequestDraft(Resource):
+    """
+    """
+    def __init__(self, resource):
+        if isinstance(resource, Resource):
+            Resource.__init__(self, resource.server_interface, resource.url,
+                              resource.url_field_ids)
+            self._load()
+
+    def publish(self):
+        """
+        Publishes the resource by getting the draft, setting the drafts public
+        field to 1 (true), and saving the draft.
+        """
+        self.update_field('public', '1')
+        try:
+            self.save()
+        except urllib2.HTTPError, e:
+            #If an HTTP 303 error is raised this is a web redirect
+            if e.code == 303:
+                #This means the publish worked, so do nothing
+                pass
+            else:
+                #Re-raise
+                raise e
+
+class ReviewRequest(Resource):
+    """
+    """
+    def __init__(self, resource):
+        if isinstance(resource, Resource):
+            Resource.__init__(self, resource.server_interface, resource.url,
+                              resource.url_field_ids)
+            self._load()
+
+    def publish(self):
+        """
+        Publishes the resource by getting the draft, setting the drafts public
+        field to 1 (true), and saving the draft.
+        """
+        #Get the draft
+        resource = self.get_or_create('draft')
+        #Load the draft as a ReviewRequestDraft
+        draft = ReviewRequestDraft(resource)
+        #Publish the draft
+        draft.publish()
+        self.refresh()
+
+    def open(self):
+        """
+        Opens the resource by setting its status field to 'pending' and
+        saving it.
+        """
+        self.update_field('status', 'pending')
+        self.save()
+
+    def close(self):
+        """
+        Closes the resource by setting its status field to "submitted' and
+        saving it.
+        """
+        self.update_field('status', 'submitted')
+        self.save()
 
 
 class ResourceList(ResourceBase):
@@ -313,23 +414,7 @@ class ResourceList(ResourceBase):
         """
         Loades the resource list from the server.
         """
-        if not self.server_interface.is_logged_in():
-            raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
-                'interface must be logged in.')
-
-        try:
-            self.resource_string = self.server_interface.get(self.url)
-            self.data = json_loads(self.resource_string)
-            self._queryable = True
-        except serverinterface.APIError, e:
-            print e
-        except urllib2.HTTPError, e:
-            print e
-
-        if not self.is_ok():
-            raise ResourceError(ResourceError.REQUEST_FAILED, 'The resource '
-                'requested could not be retrieved.')
-
+        super(ResourceList, self)._load()
         #Determine and set the resource list's resource type
         for elem in self.data:
             if elem not in ['stat', 'links', 'total_results', 'uri_templates']:
@@ -341,6 +426,11 @@ class ResourceList(ResourceBase):
             self._is_root = True
         #Otherwise it is not a root
         else:
+            #Validate that the resource loaded is a resource list
+            if not is_resource_list(self.data):
+                raise ResourceError(ResourceError.IMPROPER_RESOURCE_TYPE,
+                    'The resource loaded as a resource list is not a resource'
+                    ' list.')
             #Determine and set the child url template for the resource list
             self._determine_child_url()
 
@@ -351,8 +441,8 @@ class ResourceList(ResourceBase):
         try:
             #If this is the root resource list
             if self._is_root:
-                #The child resource url comes from the links
-                self.child_resource_url = self.get_link(self.resource_type)
+                #There is no such thing as a child resource
+                pass
             #Otherwise it is a normal list
             else:
                 #The child resource url comes from the 'uri_templates'
@@ -367,32 +457,24 @@ class ResourceList(ResourceBase):
             print "Guessing child resource url is: "
             self.child_resource_url = self.url
             self.child_resource_url += '{some_id_field}/'
+            if self.url_field_ids:
+                reverse_url_field_ids = self.url_field_ids
+                reverse_url_field_ids.reverse()
+                for n in reverse_url_field_ids:
+                    temp = self.child_resource_url.rpartition(str(n))
+                    if temp[0] is None:
+                        print "Error guessing.."
+                    else:
+                        self.child_resource_url = temp[0] + \
+                            '{some_id_field}' + temp[2]
+
             print self.child_resource_url
-
-    def _set_resource_type(self, resource_type):
-        """
-        Attempts to set the resource_type of this ResourceList.  If the
-        resource type can be changed then once it is set the child resource
-        url is updated.  If this is not allowed an IMMUTABLE_RESOURCE_TYPE
-        error is raised.
-
-        Parameters:
-            resource_type - the type of resource to set.
-        """
-        if self._is_root:
-            self.resource_type = resource_type
-            self._determine_child_url()
-        #Otherwise the resource isn't the root, and the resource type cannot
-        #be changed
-        else:
-            raise ResourceError(ResourceError.IMMUTABLE_RESOURCE_TYPE,
-                'The list\'s resource type cannot be changed.')
 
     def create(self):
         """
         Attempts to create a new instance of the resource list's child resource
-        type.  If the resource list is the root then CHILD_RESOURCE_UNCREATABLE
-        is raised.
+        type.  If the resource list does not define a 'create' link then a
+        CHILD_RESOURCE_UNCREATABLE ResourceError is raised.
 
         Returns:
             The instantiated but unloaded child Resource.
@@ -401,26 +483,31 @@ class ResourceList(ResourceBase):
             The resource returned is never already loaded.  To load it, call
             "save()"
         """
-        if self._is_root:
-            #the child resource type is also a resource list,
-            #so 'create' is meaningless
-            raise ResourceError(ResourceError.CHILD_RESOURCE_UNCREATABLE, 'The'
-                ' request cannot be made because this resource list\'s child '
-                'is not creatable.')
-        else:
-            return Resource(self.server_interface, self.get_link('create'))
+        try:
+            self.get_link('create')
+        except resource.ResourceError, e:
+            if e.code == ResourceError.INVALID_KEY:
+                #there is no 'create' link for this resource
+                raise ResourceError(ResourceError.CHILD_RESOURCE_UNCREATABLE,
+                    'The request cannot be made because this resource list\'s'
+                    'child is not creatable.')
+            else:
+                print e
+
+        return Resource(self.server_interface, self.get_link('create'),
+                        self.url_field_ids)
 
     def get(self, field_id):
         """
-        Gets and returns the child resource specified by field_id.  If the
-        resource list is the root then the child is a ResourceList itself.
-        Otherwise, the child is a Resource.
+        Gets and returns the child resource specified by field_id.  The type
+        of resource returned is dependant on the field_id specified.
 
         Parameters:
             field_id - the field id with which to get the child resource.  If
-                       the resource list is the root then field_id must be one
-                       of the items in self.get_links().  Otherwise, the
-                       field_id should be the database 'id' of the resource.
+                       the resource being retrieved is a resource list then
+                       field_id must be one of the items in self.get_links().
+                       Otherwise, the field_id should be the database 'id' of
+                       the child resource to retrieve.
 
         Returns:
             The child resource specified by field_id, which could be either a
@@ -429,40 +516,43 @@ class ResourceList(ResourceBase):
         .. note::
             The resource returned is always already loaded.
         """
-        #If this is root get() returns a resource list
-        if self._is_root:
-            #Set the resource type specified by field_id
-            if field_id:
-                self._set_resource_type(field_id)
-                return ResourceList(self.server_interface,
-                                    self.child_resource_url)
-            else:
-                raise ResourceError(ResourceError.UNKNOWN_RESOURCE_TYPE,
-                    'This resource list is a root.  The desired child list '
-                    'type must be specified')
-        #Else this isn't a root and get() returns a resource
-        else:
-            #Parse out the rightmost set of '{...}'
-            split_url = r_section_erase(self.child_resource_url, '{', '}')
-
-            if split_url is None:
-                raise ResourceError(ResourceError.INVALID_CHILD_RESOURCE_URL,
-                    "couldn't parse the {id} section from the child resource "
-                    "url")
-
+        #If the field id specifies an id
+        if str(field_id).isdigit():
             #Get the resource by creating the child resource url filled in with
             #the specified field_id
             if self.url_field_ids:
-                rsc = Resource(self.server_interface,
-                               split_url[0] + '%d' % field_id + split_url[1],
+                url = build_resource_url(self.child_resource_url,
+                                         self.url_field_ids + [field_id])
+                rsc = Resource(self.server_interface, url,
                                self.url_field_ids + [field_id])
             else:
-                rsc = Resource(self.server_interface,
-                               split_url[0] + '%d' % field_id + split_url[1],
-                               [field_id])
+                url = build_resource_url(self.child_resource_url,
+                                         [field_id])
+                rsc = Resource(self.server_interface, url, [field_id])
 
             rsc._load()
             return rsc
+        #Else the field id specifies a link
+        else:
+            #Get the resource link specified by field_id
+            if field_id:
+                try:
+                    return ResourceList(self.server_interface,
+                                        self.get_link(field_id))
+                except ResourceError, e:
+                    if e.code == ResourceError.INVALID_KEY:
+                        raise ResourceError(
+                            ResourceError.UNKNOWN_RESOURCE_TYPE,
+                            'The resource link could not be retrieved '
+                            'because this resource does not contain the '
+                            'link specified.')
+                    else:
+                        raise e
+            else:
+                raise ResourceError(ResourceError.UNKNOWN_RESOURCE_TYPE,
+                            'The resource link could not be retrieved '
+                            'because this resource does not contain the '
+                            'link specified.')
 
     """
     Methods which allow for the ResourceList to be Iterable.
@@ -537,23 +627,46 @@ Auxillary methods not specific to any resource
 """
 
 
-def r_section_erase(string, left_marker, right_marker):
+def build_resource_url(url, url_field_ids):
+    out = ''
+    field_id_index = len(url_field_ids) - 1
+    #Parse out the rightmost set of '{...}'
+    split_url = r_section_split(url, '{', '}')
+
+    if split_url is None:
+        raise ResourceError(ResourceError.INVALID_CHILD_RESOURCE_URL,
+            "couldn't parse the {id} section from the child resource "
+            "url")
+    else:
+        while not split_url is None:
+            out = split_url[0]
+            out = out + str(url_field_ids[field_id_index])
+            out = out + split_url[2]
+            split_url = r_section_split(out, '{', '}')
+            field_id_index = field_id_index - 1
+
+    return out
+
+
+def r_section_split(string, left_marker, right_marker):
     """
-    Attempts to return the left and right sides of the specified string
-    where the first instance of the substring encased in left_maker and
-    right_marker from the right side of the string is removed.
+    Attempts to return the left, center, and right sides of the specified
+    string where the first instance of the substring encased in left_maker
+    and right_marker from the right side of the string is split as the
+    center section.
 
     Parameters:
-        string       - the string to preform the r_section_erase on
+        string       - the string to preform the r_section_split on
         left_marker  - the delimiter which indicates the left side of the
-                       section to be removed
+                       section to be split
         right_marker - the delimiter which indicates the right side of the
-                       section to be removed
+                       section to be split
 
     Returns:
-        An array of two strings, where the 0th item is the left side of the
-        specified string and the 1th item is the right side of the specified
-        string.
+        An array of three strings, where the 0th item is the left side of the
+        specified string, the 1th item is the center section (including the
+        left and right markers,) and the 2th item is the right side of the
+        specified string.
 
         If either the left or right markers cannot be found, or the section
         they define is not "left-to-right" and "perfectly bounded", then
@@ -585,7 +698,11 @@ def r_section_erase(string, left_marker, right_marker):
     elif left_pos + len(left_marker) > right_pos + len(right_marker):
         return None
 
-    out = [string[0:left_pos], string[right_pos + len(right_marker):]]
+    out = [
+        string[0:left_pos],
+        string[left_pos:right_pos + len(right_marker)],
+        string[right_pos + len(right_marker):]
+    ]
     return out
 
 
