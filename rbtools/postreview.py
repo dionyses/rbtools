@@ -2568,7 +2568,7 @@ def check_gnu_diff():
             sys.stderr.write(GNU_DIFF_WIN32_URL)
             sys.stderr.write('\n')
 
-        die()
+        self.die()
 
 
 def execute(command, env=None, split_lines=False, ignore_errors=False,
