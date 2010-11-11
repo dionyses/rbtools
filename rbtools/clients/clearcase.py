@@ -50,7 +50,7 @@ class ClearCaseClient(Client):
         #   multiple clearcase repositories. This should be implemented.
         return Repository(path=self.url,
                               base_path=self.url,
-                              supports_parent_diffs=False)
+                              supports_parent_diffs=False, util=self.util)
 
     def get_previous_version(self, files):
         file = []

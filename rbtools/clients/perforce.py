@@ -48,7 +48,8 @@ class PerforceClient(Client):
                       data, re.M)
         self.p4d_version = int(m.group(1)), int(m.group(2))
 
-        return RepositoryInfo(path=repository_path, supports_changesets=True)
+        return Repository(path=repository_path, supports_changesets=True
+                                util=self.util)
 
     def diff(self, args):
         """

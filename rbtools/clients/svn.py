@@ -47,7 +47,7 @@ class SVNClient(Client):
         # and error out if we don't.
         self.check_gnu_diff()
 
-        return SVNRepository(path, base_path, m.group(1))
+        return SVNRepository(path, base_path, m.group(1), util=self.util)
 
     def diff(self, files):
         """
@@ -232,7 +232,8 @@ class SVNRepository(Repository):
 
     def __init__(self, path, base_path, uuid, supports_parent_diffs=False):
         RepositoryInfo.__init__(self, path, base_path,
-                                supports_parent_diffs=supports_parent_diffs)
+                                supports_parent_diffs=supports_parent_diffs,
+                                util=self.util)
         self.uuid = uuid
 
     def find_server_repository_info(self, server):
