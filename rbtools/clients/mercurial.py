@@ -63,7 +63,11 @@ class MercurialCLient(Client):
                 base_path = ''
 
         return Repository(path=path, base_path=base_path,
+<<<<<<< HEAD
                               supports_parent_diffs=True, util=self.util)
+=======
+                              supports_parent_diffs=True)
+>>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
 
     def _calculate_remote_path(self):
         """Calculate the remote path for the repository

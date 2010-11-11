@@ -4,7 +4,11 @@ import socket
 import sys
 import urllib
 
+<<<<<<< HEAD
 from rbtools.api.utilities import RBUtilities
+=======
+from utilities import RBUtilities
+>>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
 
 
 class Client(object):
@@ -17,7 +21,11 @@ class Client(object):
 
     url = None
 
+<<<<<<< HEAD
     def __init__(self, url=None, util=RBUtilities()):
+=======
+    def __init__(self, url=None, util=utilities()):
+>>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
         self.url = url
 
     def set_url(self, url=None):
@@ -39,11 +47,19 @@ class Client(object):
         return (None, None)
 
 
+<<<<<<< HEAD
 class Repository(object):
     """A representation of a source code repository."""
 
     def __init__(self, path=None, base_path=None, supports_changesets=False,
                  supports_parent_diffs=False, util=RBUtilities()):
+=======
+class Repository:
+    """A representation of a source code repository."""
+
+    def __init__(self, path=None, base_path=None, supports_changesets=False,
+                 supports_parent_diffs=False):
+>>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
         self.path = path
         self.base_path = base_path
         self.supports_changesets = supports_changesets

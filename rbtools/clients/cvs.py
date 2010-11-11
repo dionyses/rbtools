@@ -39,7 +39,11 @@ class CVSClient(Client):
             except socket.error, msg:
                 self.util.output("failed to get fqdn for %s, msg=%s" % (host, msg))
 
+<<<<<<< HEAD
         return Repository(path=repository_path, util=self.util)
+=======
+        return Repository(path=repository_path)
+>>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
 
     def diff(self, files):
         """Performs a diff across all modified files in a CVS repository.

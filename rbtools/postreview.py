@@ -593,7 +593,10 @@ class ReviewBoardServer(object):
 
         url = self._make_url(path)
         rsp = urllib2.urlopen(url).read()
-        self.cookie_jar.save(self.cookie_file)
+        try:
+            self.cookie_jar.save(self.cookie_file)
+        except IOError, e:
+            debug('Failed to write cookie file: %s' % e)
         return rsp
 
     def _make_url(self, path):
@@ -641,7 +644,10 @@ class ReviewBoardServer(object):
         try:
             r = urllib2.Request(url, body, headers)
             data = urllib2.urlopen(r).read()
-            self.cookie_jar.save(self.cookie_file)
+            try:
+                self.cookie_jar.save(self.cookie_file)
+            except IOError, e:
+                debug('Failed to write cookie file: %s' % e)
             return data
         except urllib2.HTTPError, e:
             # Re-raise so callers can interpret it.
@@ -822,7 +828,7 @@ class CVSClient(SCMClient):
         for rev in revision_range.split(":"):
             revs += ["-r", rev]
 
-        return self.do_diff(revs)
+        return self.do_diff(revs + args)
 
     def do_diff(self, params):
         """
@@ -1479,15 +1485,20 @@ class PerforceClient(SCMClient):
         return None
 
     def get_changenum(self, args):
-        if len(args) == 1:
+        if len(args) == 0:
+            return "default"
+        elif len(args) == 1:
             if args[0] == "default":
                 return "default"
 
             try:
                 return str(int(args[0]))
             except ValueError:
-                pass
-        return None
+                # (if it isn't a number, it can't be a cln)
+                return None
+        # there are multiple args (not a cln)
+        else:
+            return None
 
     def diff(self, args):
         """
@@ -1708,6 +1719,9 @@ class PerforceClient(SCMClient):
             description = execute(["p4", "describe", "-s", changenum],
                                   split_lines=True)
 
+            if re.search("no such changelist", description[0]):
+                die("CLN %s does not exist." % changenum)
+
             # Some P4 wrappers are addding an extra line before the description
             if '*pending*' in description[0] or '*pending*' in description[1]:
                 cl_is_pending = True
@@ -1721,6 +1735,9 @@ class PerforceClient(SCMClient):
             # so we have to get it a different way.
             info = execute(["p4", "opened", "-c", str(changenum)],
                            split_lines=True)
+
+            if len(info) == 1 and info[0].startswith("File(s) not opened on this client."):
+                die("Couldn't find any affected files for this change.")
 
             for line in info:
                 data = line.split(" ")
@@ -2405,12 +2422,12 @@ class GitClient(SCMClient):
 
         if self.type == "svn":
             diff_lines = execute(["git", "diff", "--no-color", "--no-prefix",
-                                  "-r", "-u", rev_range],
+                                  "--no-ext-diff", "-r", "-u", rev_range],
                                  split_lines=True)
             return self.make_svn_diff(ancestor, diff_lines)
         elif self.type == "git":
             return execute(["git", "diff", "--no-color", "--full-index",
-                            rev_range])
+                            "--no-ext-diff", rev_range])
 
         return None
 
@@ -2752,7 +2769,7 @@ def tempt_fate(server, tool, changenum, diff_content=None,
     if options.publish:
         server.publish(review_request)
 
-    request_url = 'r/' + str(review_request['id'])
+    request_url = 'r/' + str(review_request['id']) + '/'
     review_url = urljoin(server.url, request_url)
 
     if not review_url.startswith('http'):
@@ -3030,6 +3047,9 @@ def main():
                 die("Unable to open diff filename: %s" % e)
     else:
         diff, parent_diff = tool.diff(args)
+
+    if len(diff) == 0:
+        die("There don't seem to be any diffs!")
 
     if isinstance(tool, PerforceClient) and changenum is not None:
         changenum = tool.sanitize_changenum(changenum)

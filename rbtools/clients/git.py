@@ -56,8 +56,12 @@ class GitClient(Client):
 
                     return SVNRepository(path=path, base_path=base_path,
                                              uuid=uuid,
+<<<<<<< HEAD
                                              supports_parent_diffs=True,
                                              util = self.util)
+=======
+                                             supports_parent_diffs=True)
+>>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
         else:
             # Versions of git-svn before 1.5.4 don't (appear to) support
             # 'git svn info'.  If we fail because of an older git install,
@@ -109,8 +113,12 @@ class GitClient(Client):
         if self.url:
             self.type = "git"
             return Repository(path=self.url, base_path='',
+<<<<<<< HEAD
                                   supports_parent_diffs=True,
                                   util = self.util)
+=======
+                                  supports_parent_diffs=True)
+>>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
 
         return None
 
