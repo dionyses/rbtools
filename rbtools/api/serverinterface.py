@@ -15,13 +15,6 @@ try:
 except ImportError:
     from simplejson import loads as json_loads
 
-DEBUG = False
-
-
-def debug(str):
-    if DEBUG:
-        print ">>>> %s" % str
-
 
 class RequestWithMethod(urllib2.Request):
     """
@@ -90,8 +83,7 @@ class ServerInterface(object):
     A class which performs basic communication with a ReviewBoard server and
     tracks cookie information.
     """
-    def __init__(self, server_url, cookie_file=".cookie",
-                 password_mgr=None):
+    def __init__(self, server_url, cookie_file, password_mgr=None):
         self.server_url = server_url
         self.cookie_file = cookie_file
         self.user = None
@@ -102,6 +94,7 @@ class ServerInterface(object):
             self.password_mgr = ReviewBoardHTTPPasswordMgr(self.server_url)
 
         self.cookie_jar = cookielib.MozillaCookieJar(self.cookie_file)
+        self.cookie_jar.load()
         cookie_handler = urllib2.HTTPCookieProcessor(self.cookie_jar)
         basic_auth_handler = urllib2.HTTPBasicAuthHandler(self.password_mgr)
         digest_auth_handler = urllib2.HTTPDigestAuthHandler(self.password_mgr)
@@ -149,55 +142,6 @@ class ServerInterface(object):
         resource = urllib2.urlopen(r)
         self.cookie_jar.save(self.cookie_file)
         return resource.read()
-
-    def _request2(self, method, url, fields=None, files=None):
-        """
-        WORK IN PROGRESS - SAME AS _request BUT USING A DIFFERENT METHOD
-        TO ENCODE
-
-        Encodes the input fields and files and performs an HTTP request to the
-        specified url using the specified method.  Any cookies set are stored.
-
-        Parameteres:
-            method      - the HTTP method to be used.  Accepts GET, POST,
-                          PUT, and DELETE
-            url         - the url to make the request to
-            fields      - any data to be specified in the request.  This data
-                          should be stored in a dict of key:value pairs
-            files       - any files to be specified in the request.  This data
-                          should be stored in a dict of key:dict,
-                          filename:value and content:value structure
-
-        Returns:
-            The response from the server.  For more information view the
-            ReviewBoard WebAPI Documentation.
-        """
-        if fields:
-            body = urllib.urlencode(fields)
-        else:
-            body = ""
-
-        headers = {
-            'Content-Length': str(len(body))
-        }
-
-        if not self._valid_method(method):
-            raise APIError(APIError.INVALID_REQUEST_METHOD,
-                           'An invalid HTTP method was used')
-
-        try:
-            debug("_requesting with the header: %s" % headers)
-            debug("and data: %s" % body)
-            r = RequestWithMethod(method, url, body, headers)
-            resource = urllib2.urlopen(r)
-            self.cookie_jar.save(self.cookie_file)
-            return resource.read()
-        except urllib2.HTTPError, e:
-            # Re-raise so callers can interpret it.
-            raise e
-        except urllib2.URLError, e:
-            # Re-raise so callers can interpret it.
-            raise e
 
     def get(self, url):
         """ Make an HTTP GET on the specified url returning the response.

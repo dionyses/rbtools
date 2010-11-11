@@ -130,10 +130,6 @@ class ResourceBase(object):
         Once complete, the data received is loaded into this resource's data
         dictionary and it is verified that the request was successful.
         """
-        if not self.server_interface.is_logged_in():
-            raise LoginRequiredError(
-                'The server interface must be logged in.')
-
         self.resource_string = self.server_interface.get(self.url)
         self.data = json_loads(self.resource_string)
         self._queryable = True
@@ -187,10 +183,6 @@ class Resource(ResourceBase):
     def delete(self):
         """ Deletes the current resource
         """
-        if not self.server_interface.is_logged_in():
-            raise LoginRequiredError(
-                'The server interface must be logged in.')
-
         if self._queryable:
             self.resource_string = self.server_interface.delete(
                 self.get_link('delete'))
@@ -205,10 +197,6 @@ class Resource(ResourceBase):
     def save(self):
         """ Saves the current updates to the resource.
         """
-        if not self.server_interface.is_logged_in():
-            raise ResourceError(ResourceError.LOGIN_REQUIRED, 'The server '
-                'interface must be logged in.')
-
         self.resource_string = self.server_interface.put(self.url,
                                                          self.updates)
         self.data = json_loads(self.resource_string)
@@ -479,7 +467,13 @@ class ReviewRequestDraft(Resource):
         if isinstance(resource, Resource):
             super(ReviewRequestDraft, self).__init__(resource.server_interface,
                                            resource.url)
-            self._load()
+            if resource._queryable:
+                self.resource_string = resource.resource_string
+                self.data = resource.data
+                self._queryable = resource._queryable
+                self.resource_type = resource.resource_type
+            else:        
+                self._load()
 
     def publish(self):
         """ Publishes the review request draft.
@@ -509,7 +503,13 @@ class ReviewRequest(Resource):
         if isinstance(resource, Resource):
             super(ReviewRequest, self).__init__(resource.server_interface,
                                            resource.url)
-            self._load()
+            if resource._queryable:
+                self.resource_string = resource.resource_string
+                self.data = resource.data
+                self._queryable = resource._queryable
+                self.resource_type = resource.resource_type
+            else:        
+                self._load()
 
     def publish(self):
         """ Publishes the review request.
