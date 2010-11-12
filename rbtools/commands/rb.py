@@ -6,6 +6,7 @@ from rbtools.commands import *
 from rbtools.api.temputilities import execute
 import __init__
 
+
 def main():
     valid = False
 
@@ -25,7 +26,7 @@ def main():
         pattern = re.compile('(rb-)')
 
         for n in __init__.__all__:
-            sp = re.split('rb-', n) 
+            sp = re.split('rb-', n)
             if len(sp) > 1:
                 print sp[1]
 

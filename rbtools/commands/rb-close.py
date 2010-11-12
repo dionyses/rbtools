@@ -1,7 +1,7 @@
 import os
 import sys
 
-from rbtools.api.resource import Resource, ResourceList, ReviewRequest
+from rbtools.api.resource import Resource, RootResource, ReviewRequest
 from rbtools.api.serverinterface import ServerInterface
 
 
@@ -13,14 +13,15 @@ def main():
         cookie = os.path.join(cwd, '.rb_cookie')
         server_url = 'http://demo.reviewboard.org/'
         resource_id = sys.argv[2]
-        
+
         if resource_id.isdigit():
             if sys.argv[1] == '-s' or sys.argv[1] == '-d':
                 valid = True
                 server = ServerInterface(server_url, ".newstyle_cookie")
-                root = ResourceList(server, server_url + 'api/')
+                root = RootResource(server, server_url + 'api/')
                 review_requests = root.get('review_requests')
-                review_request = ReviewRequest(review_requests.get(resource_id))
+                review_request = \
+                    ReviewRequest(review_requests.get(resource_id))
 
                 if sys.argv[1] == '-s':
                     review_request.submit()

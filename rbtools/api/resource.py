@@ -1,3 +1,4 @@
+import re
 import urllib2
 
 import serverinterface
@@ -295,74 +296,17 @@ class Resource(ResourceBase):
             return rsc
 
 
-class ResourceList(ResourceBase):
-    """
-    An object which specifically deals with lists of resources.
+class ResourceListBase(ResourceBase):
+    """ An base object which specifically deals with lists of resources.
     """
     def __init__(self, server_interface, url):
-        super(ResourceList, self).__init__(server_interface)
+        super(ResourceListBase, self).__init__(server_interface)
         self.url = url
-        self.child_resource_url = None
         self.field_id = None
         # Set the _index for iteration to -1.  Each call to next() will first
         # increment the index then attempt to return the item
         self._index = -1
-        self._is_root = False
         self._load()
-
-    def _load(self):
-        """ Loads the resource list from the server.
-        """
-        super(ResourceList, self)._load()
-
-        # Determine and set the resource list's resource type
-        for elem in self.data:
-            if elem not in ['stat', 'links', 'total_results', 'uri_templates']:
-                self.resource_type = elem
-
-        if self.resource_type is None:
-            self._is_root = True
-        else:
-            if not _is_resource_list(self.data):
-                raise InvalidResourceTypeError(
-                   'The resource loaded as a resource list is not a resource '
-                   'list.')
-            self._determine_child_url()
-
-    def _determine_child_url(self):
-        """ Determine and set the child resource url.
-        """
-        if self._is_root:
-            # There is no such thing as a child resource
-            pass
-        else:
-            # The child resource url comes from appending an id to the
-            # end of the resource list's url
-            self.child_resource_url = self.url + '{id_field}/'
-
-    def create(self):
-        """ Creates a new instance of the resource list's child resource.
-
-        Attempts to create a new instance of the resource list's child resource
-        type.  If the resource list does not define a 'create' link then a
-        CHILD_RESOURCE_UNCREATABLE ResourceError is raised.
-
-        Returns:
-            The instantiated but unloaded child Resource.
-
-        .. note::
-            The resource returned is never already loaded.  To load it, call
-            "save()"
-        """
-        try:
-            self.get_link('create')
-        except InvalidKeyError, e:
-            # there is no 'create' link for this resource
-            raise ChildResourceUncreatableError(
-                'The request cannot be made because this resource list\'s'
-                'child is not creatable.')
-
-        return Resource(self.server_interface, self.get_link('create'))
 
     def get(self, field_id):
         """ Gets the resource specified relative to this resource list.
@@ -414,18 +358,13 @@ class ResourceList(ResourceBase):
         if self._index == len(self):
             self._index = -1
             raise StopIteration
-        elif self._is_root:
-            return self.get(self.get_links().keys()[self._index])
         else:
             return self.get(self.data[self.resource_type][self._index]['id'])
 
     # Methods which allow for the ResourceList to behave like a Sequence.
     # That is, they allow the ResourceList to be indexed or sliced.
     def __len__(self):
-        if self._is_root:
-            return len(self.get_links())
-        else:
-            return len(self.data[self.resource_type])
+        return len(self.data[self.resource_type])
 
     def __contains__(self, key):
         for n in self:
@@ -437,25 +376,93 @@ class ResourceList(ResourceBase):
     def __getitem__(self, position):
         if isinstance(position, slice):
             rscs = []
+            resources = self.get_field(self.resource_type)[position]
 
-            if self._is_root:
-                resource_lists = self.get_links().keys()[position]
-
-                for n in resource_lists:
-                    rscs.append(self.get(n))
-            else:
-                resources = self.get_field(self.resource_type)[position]
-
-                for n in resources:
-                    rscs.append(self.get(n['id']))
+            for n in resources:
+                rscs.append(self.get(n['id']))
         else:
-            rscs = None
+            rscs = self.get(
+                self.get_field(self.resource_type)[position]['id'])
 
-            if self._is_root:
-                rscs = self.get(self.get_links().keys()[position])
-            else:
-                rscs = self.get(
-                    self.get_field(self.resource_type)[position]['id'])
+        return rscs
+
+
+class ResourceList(ResourceListBase):
+    """ Handles resource list type objects.
+    """
+    def __init__(self, server_interface, url):
+        super(ResourceList, self).__init__(server_interface, url)
+
+    def _load(self):
+        """ Loads the resource list from the server.
+        """
+        super(ResourceListBase, self)._load()
+
+        # Determine and set the resource list's resource type
+        for elem in self.data:
+            if elem not in ['stat', 'links', 'total_results', 'uri_templates']:
+                self.resource_type = elem
+
+        if not _is_resource_list(self.data):
+            raise InvalidResourceTypeError(
+                'The resource loaded as a resource list is not a resource '
+                'list.')
+
+    def create(self):
+        """ Creates a new instance of the resource list's child resource.
+
+        Attempts to create a new instance of the resource list's child resource
+        type.  If the resource list does not define a 'create' link then a
+        CHILD_RESOURCE_UNCREATABLE ResourceError is raised.
+
+        Returns:
+            The instantiated but unloaded child Resource.
+
+        .. note::
+            The resource returned is never already loaded.  To load it, call
+            "save()"
+        """
+        try:
+            self.get_link('create')
+        except InvalidKeyError, e:
+            # there is no 'create' link for this resource
+            raise ChildResourceUncreatableError(
+                'The request cannot be made because this resource list\'s'
+                'child is not creatable.')
+
+        return Resource(self.server_interface, self.get_link('create'))
+
+
+class RootResource(ResourceListBase):
+    """ Resource list specific to the root.
+    """
+    def __init__(self, server_interface, url):
+        super(RootResource, self).__init__(server_interface, url)
+        if not re.search('(api/)$', self.url):
+            raise InvalidResourceTypeError(
+                'The resource loaded as a RootResource is not a root.')
+
+    def __next__(self):
+        self._index += 1
+
+        if self._index == len(self):
+            self._index = -1
+            raise StopIteration
+        else:
+            return self.get(self.get_links().keys()[self._index])
+
+    def __len__(self):
+        return len(self.get_links())
+
+    def __getitem__(self, position):
+        if isinstance(position, slice):
+            rscs = []
+            resource_lists = self.get_links().keys()[position]
+
+            for n in resource_lists:
+                rscs.append(self.get(n))
+        else:
+            rscs = self.get(self.get_links().keys()[position])
 
         return rscs
 
@@ -472,14 +479,14 @@ class ReviewRequestDraft(Resource):
                 self.data = resource.data
                 self._queryable = resource._queryable
                 self.resource_type = resource.resource_type
-            else:        
+            else:
                 self._load()
 
     def publish(self):
         """ Publishes the review request draft.
         """
         self.update_field('public', '1')
-        
+
         try:
             self.save()
         except urllib2.HTTPError, e:
@@ -508,7 +515,7 @@ class ReviewRequest(Resource):
                 self.data = resource.data
                 self._queryable = resource._queryable
                 self.resource_type = resource.resource_type
-            else:        
+            else:
                 self._load()
 
     def publish(self):

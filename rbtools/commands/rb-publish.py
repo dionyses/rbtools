@@ -1,7 +1,7 @@
 import os
 import sys
 
-from rbtools.api.resource import Resource, ResourceList, ReviewRequestDraft
+from rbtools.api.resource import Resource, RootResource, ReviewRequestDraft
 from rbtools.api.serverinterface import ServerInterface
 
 
@@ -17,10 +17,11 @@ def main():
         if resource_id.isdigit():
             valid = True
             server = ServerInterface(server_url, cookie)
-            root = ResourceList(server, server_url + 'api/')
+            root = RootResource(server, server_url + 'api/')
             review_requests = root.get('review_requests')
             review_request = review_requests.get(resource_id)
-            review_request_draft = ReviewRequestDraft(review_request.get_or_create('draft'))
+            review_request_draft = \
+                ReviewRequestDraft(review_request.get_or_create('draft'))
             review_request_draft.publish()
 
     if not valid:
