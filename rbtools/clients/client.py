@@ -4,11 +4,7 @@ import socket
 import sys
 import urllib
 
-<<<<<<< HEAD
-from rbtools.api.utilities import RBUtilities
-=======
-from utilities import RBUtilities
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
+from api.utilities import RBUtilities
 
 
 class Client(object):
@@ -21,12 +17,9 @@ class Client(object):
 
     url = None
 
-<<<<<<< HEAD
     def __init__(self, url=None, util=RBUtilities()):
-=======
-    def __init__(self, url=None, util=utilities()):
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
         self.url = url
+        self.util = util
 
     def set_url(self, url=None):
         self.url = url
@@ -47,24 +40,15 @@ class Client(object):
         return (None, None)
 
 
-<<<<<<< HEAD
 class Repository(object):
     """A representation of a source code repository."""
 
     def __init__(self, path=None, base_path=None, supports_changesets=False,
-                 supports_parent_diffs=False, util=RBUtilities()):
-=======
-class Repository:
-    """A representation of a source code repository."""
-
-    def __init__(self, path=None, base_path=None, supports_changesets=False,
                  supports_parent_diffs=False):
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
         self.path = path
         self.base_path = base_path
         self.supports_changesets = supports_changesets
         self.supports_parent_diffs = supports_parent_diffs
-        self.util.output("repository info: %s" % self)
 
     def __str__(self):
         return "Path: %s, Base path: %s, Supports changesets: %s" % \
@@ -74,8 +58,6 @@ class Repository:
 
         if not base_path.startswith('/'):
             base_path = '/' + base_path
-        self.util.output("changing repository info base_path from %s to %s" % \
-              (self.base_path, base_path))
         self.base_path = base_path
 
     def find_server_repository_info(self, server):

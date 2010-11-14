@@ -1,13 +1,15 @@
 import re
 
-from rbtools.client import Client, Repository
+from clients.client import Client, Repository
+
+from api.utilities import RBUtilities
 
 class SVNClient(Client):
     """A Cleint for SVN repositories"""
 
     def get_info(self):
         """Returns information about the repository
-        
+
         This is an actual implementation that returns info about the SVN repo
         """
 
@@ -47,11 +49,7 @@ class SVNClient(Client):
         # and error out if we don't.
         self.check_gnu_diff()
 
-<<<<<<< HEAD
         return SVNRepository(path, base_path, m.group(1), util=self.util)
-=======
-        return SVNRepository(path, base_path, m.group(1))
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
 
     def diff(self, files):
         """
@@ -104,7 +102,7 @@ class SVNClient(Client):
                 to_file, _ = self.parse_filename_header(line[4:])
                 info = self.svn_info(to_file)
 
-                if info.in("Copied From URL"):
+                if info.has_key("Copied From URL"):
                     self.url = info["Copied From URL"]
                     root = info["Repository Root"]
                     from_file = urllib.unquote(url[len(root):])
@@ -199,8 +197,7 @@ class SVNClient(Client):
             result.append(line)
 
         return result
-        
-        
+
     def check_gnu_diff():
         """
         Checks if GNU diff is installed, and informs the user if it's not.
@@ -236,12 +233,7 @@ class SVNRepository(Repository):
 
     def __init__(self, path, base_path, uuid, supports_parent_diffs=False):
         RepositoryInfo.__init__(self, path, base_path,
-<<<<<<< HEAD
-                                supports_parent_diffs=supports_parent_diffs,
-                                util=self.util)
-=======
                                 supports_parent_diffs=supports_parent_diffs)
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
         self.uuid = uuid
 
     def find_server_repository_info(self, server):

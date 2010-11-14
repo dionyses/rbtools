@@ -4,14 +4,15 @@ import re
 import socket
 import stat
 
-from repository import Client, Repository
+from clients.client import Client, Repository
+
 
 class PerforceClient(Client):
     """An implementation of Repository for Perforce repositories"""
 
     def get_info(self):
         """Returns information about the repository
-        
+
         This is an actual implementation that returns info about the Perforce
         repository
         """
@@ -48,12 +49,7 @@ class PerforceClient(Client):
                       data, re.M)
         self.p4d_version = int(m.group(1)), int(m.group(2))
 
-<<<<<<< HEAD
-        return Repository(path=repository_path, supports_changesets=True
-                                util=self.util)
-=======
-        return RepositoryInfo(path=repository_path, supports_changesets=True)
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
+        return Repository(path=repository_path, supports_changesets=True)
 
     def diff(self, args):
         """

@@ -8,14 +8,6 @@ import tempfile
 
 from tempfile import mkstemp
 
-from rbtools.clients.clearcase import ClearCaseClient
-from rbtools.clients.client import Client
-from rbtools.clients.cvs import CVSClient
-from rbtools.clients.git import GitClient
-from rbtools.clients.mercurial import MercurialClient
-from rbtools.clients.perforce import PerforceClient
-from rbtools.clients.svn import SVNClient
-
 
 class RBUtilities(object):
     """A collection of utility functions
@@ -24,50 +16,10 @@ class RBUtilities(object):
     information, making system calls, and raising warnings and errors
     """
 
-    CLIENTS = (
-    SVNClient(),
-    CVSClient(),
-    GitClient(),
-    MercurialClient(),
-    PerforceClient(),
-    ClearCaseClient(),
-    )
-
     ERR_NO = 1
 
     def __init__(self, log_file='rbproblems.log', log_level=logging.DEBUG):
         logging.basicConfig(filename=log_file, level=log_level)
-
-    def get_client(self, url=None, types=CLIENTS):
-        """Returns the source control manager client
-
-        Determines the correct type of repository being used (using a list
-        of possible types) in order to pass the correct client back.
-        """
-
-        client = None
-        info = None
-
-        if not url:
-            type = 'missingRequiredParameter'
-            message = 'get_client requires a url to be passed as a parameter'
-            self.raise_error(type, message)
-
-        for client in CLIENTS:
-            client.set_url(url)
-
-            info = client.get_info()
-
-            if info:
-                break
-
-        if not info:
-            client = None
-
-            if url:
-                type = 'repositoryNotFound'
-                message = 'No repository could be accessed at: ' + url
-                self.raise_error(type, message)
 
     def make_tempfile(self):
         """

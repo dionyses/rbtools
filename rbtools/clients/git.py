@@ -1,12 +1,13 @@
 import os
 import re
 
-from client import Client, Repository
-from svn import SVNClient, SVNRepository
+from clients.client import Client, Repository
+from clients.svn import SVNClient, SVNRepository
+
 
 class GitClient(Client):
     """A client for Git repositories"""
-    
+
     upstream_branch = None
 
     def _strip_heads_prefix(self, ref):
@@ -56,12 +57,8 @@ class GitClient(Client):
 
                     return SVNRepository(path=path, base_path=base_path,
                                              uuid=uuid,
-<<<<<<< HEAD
                                              supports_parent_diffs=True,
-                                             util = self.util)
-=======
-                                             supports_parent_diffs=True)
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
+                                             util=self.util)
         else:
             # Versions of git-svn before 1.5.4 don't (appear to) support
             # 'git svn info'.  If we fail because of an older git install,
@@ -113,12 +110,7 @@ class GitClient(Client):
         if self.url:
             self.type = "git"
             return Repository(path=self.url, base_path='',
-<<<<<<< HEAD
-                                  supports_parent_diffs=True,
-                                  util = self.util)
-=======
                                   supports_parent_diffs=True)
->>>>>>> 44dc7cac13f0ca9005da1f973740cc3c2623aab4
 
         return None
 
@@ -150,11 +142,11 @@ class GitClient(Client):
                 actual[2] >= expected[2])
 
     def scan_for_server(self, repository_info):
-    """Scans for a git server
-    
-    Scans looking for a Git server, or failing that an SVN server
-    """
-    
+        """Scans for a git server
+
+        Scans looking for a Git server, or failing that an SVN server
+        """
+
         # Scan first for dot files, since it's faster and will cover the
         # user's $HOME/.reviewboardrc
         server_url = super(GitClient, self).scan_for_server( \
@@ -182,7 +174,7 @@ class GitClient(Client):
 
     def diff(self, args):
         """Creates a diff
-        
+
         Performs a diff across all modified files in the branch, taking into
         account a parent branch.
         """
@@ -218,7 +210,7 @@ class GitClient(Client):
 
     def make_svn_diff(self, parent_branch, diff_lines):
         """Creates a diff for an svn server
-        
+
         Formats the output of git diff such that it's in a form that
         svn diff would generate. This is needed so the SVNTool in Review
         Board can properly parse this diff.

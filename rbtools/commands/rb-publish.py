@@ -1,8 +1,8 @@
 import os
 import sys
 
-from rbtools.api.resource import Resource, RootResource, ReviewRequestDraft
-from rbtools.api.serverinterface import ServerInterface
+from resource import Resource, RootResource, ReviewRequestDraft
+from serverinterface import ServerInterface
 
 
 def main():

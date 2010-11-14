@@ -3,7 +3,7 @@ import re
 import sys
 
 from rbtools.commands import *
-from rbtools.api.temputilities import execute
+from rbtools.api.utilities import execute
 import __init__
 
 
