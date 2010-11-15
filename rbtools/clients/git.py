@@ -119,7 +119,6 @@ class GitClient(Client):
 
         Returns a tuple: (upstream_branch, remote_url)
         """
-        #upstream_branch = options.tracking or default_upstream_branch or
         upstream_branch = default_upstream_branch or \
                           'origin/master'
         upstream_remote = upstream_branch.split('/')[0]
@@ -172,7 +171,7 @@ class GitClient(Client):
 
         return None
 
-    def diff(self, args):
+    def diff(self, args=None):
         """Creates a diff
 
         Performs a diff across all modified files in the branch, taking into
@@ -182,13 +181,8 @@ class GitClient(Client):
         self.merge_base = self.util.execute(["git", "merge-base", \
                                 self.upstream_branch, self.head_ref]).strip()
 
-        #if self.upstream_branch:
-        #    diff_lines = self.make_diff(self.upstream_branch)
-        #    parent_diff_lines = self.make_diff(self.merge_base, self.upstream_branch)
-        #else:
-        if 1:
-            diff_lines = self.make_diff(self.merge_base, self.head_ref)
-            parent_diff_lines = None
+        diff_lines = self.make_diff(self.merge_base, self.head_ref)
+        parent_diff_lines = None
 
         return (diff_lines, parent_diff_lines)
 
