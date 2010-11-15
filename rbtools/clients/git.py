@@ -182,10 +182,11 @@ class GitClient(Client):
         self.merge_base = self.util.execute(["git", "merge-base", \
                                 self.upstream_branch, self.head_ref]).strip()
 
-        if self.upstream_branch:
-            diff_lines = self.make_diff(parent_branch)
-            parent_diff_lines = self.make_diff(self.merge_base, parent_branch)
-        else:
+        #if self.upstream_branch:
+        #    diff_lines = self.make_diff(self.upstream_branch)
+        #    parent_diff_lines = self.make_diff(self.merge_base, self.upstream_branch)
+        #else:
+        if 1:
             diff_lines = self.make_diff(self.merge_base, self.head_ref)
             parent_diff_lines = None
 
