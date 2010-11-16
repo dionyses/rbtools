@@ -164,6 +164,7 @@ class Resource(ResourceBase):
         super(Resource, self).__init__(server_interface)
         self.url = url
         self.updates = {}
+        self.file_updates = {}
 
     def _determine_resource_type(self):
         """ Attempts to determine and set the resource type.
@@ -198,8 +199,16 @@ class Resource(ResourceBase):
     def save(self):
         """ Saves the current updates to the resource.
         """
-        self.resource_string = self.server_interface.put(self.url,
-                                                         self.updates)
+        # This is an update, perform a put
+        if self._queryable:
+            self.resource_string = \
+                self.server_interface.put(self.url, self.updates,
+                                          self.file_updates)
+        else:
+            self.resource_string = \
+                self.server_interface.post(self.url, self.updates,
+                                           self.file_updates)
+
         self.data = json_loads(self.resource_string)
         self._queryable = True
 
@@ -249,9 +258,17 @@ class Resource(ResourceBase):
         """ Records an update to be made to the resource.
 
         Updates the specified field to the specified value.  Changes are not
-        POSTed to the server until "save()" is called.
+        PUT/POSTed to the server until "save()" is called.
         """
         self.updates[field] = value
+
+    def update_file(self, path, file_data):
+        """ Records a file update to be made to the resource.
+
+        Updates the specified path to the specified file_data.  Changes are
+        not PUT/POSTed to the server until "save()" is called.
+        """
+        self.file_updates[path] = file_data
 
     def get_or_create(self, link):
         """ Get or create then get the resource specified by link.
@@ -272,10 +289,14 @@ class Resource(ResourceBase):
         """
         try:
             # First create the resource if it doesn't already exist by
-            # performing a blank put to the url
+            # performing a blank post to the url
             resp = self.server_interface.post(self.get_link(link), {})
         except urllib2.HTTPError, e:
             if e.code == 500:
+                pass
+            elif e.code == 400:
+                pass
+            elif e.code == 405:
                 pass
             else:
                 raise e
@@ -329,7 +350,7 @@ class ResourceListBase(ResourceBase):
             The resource returned is always already loaded.
         """
         if str(field_id).isdigit():
-            child_url = self.url + field_id + '/'
+            child_url = self.url + str(field_id) + '/'
             rsc = Resource(self.server_interface, child_url)
             rsc._load()
             return rsc
@@ -379,10 +400,14 @@ class ResourceListBase(ResourceBase):
             resources = self.get_field(self.resource_type)[position]
 
             for n in resources:
-                rscs.append(self.get(n['id']))
+                rsc = Resource(self.server_interface, n['links']['self']['href'])
+                rsc._load()
+                rscs.append(rsc)
         else:
-            rscs = self.get(
-                self.get_field(self.resource_type)[position]['id'])
+            rscs = Resource(self.server_interface,
+                self.get_field(self.resource_type)[position]\
+                ['links']['self']['href'])
+            rscs._load()
 
         return rscs
 

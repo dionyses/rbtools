@@ -86,7 +86,6 @@ class ServerInterface(object):
     """
     def __init__(self, server_url, cookie_path_file, password_mgr=None):
         self.server_url = server_url
-        self.user = None
 
         if os.path.isfile(cookie_path_file):
             self.cookie_file = cookie_path_file
@@ -144,6 +143,9 @@ class ServerInterface(object):
             'Content-Type': content_type,
             'Content-Length': str(len(body))
         }
+
+        print headers
+        print body
 
         if not self._valid_method(method):
             raise InvalidRequestMethod('An invalid HTTP method was used.')
