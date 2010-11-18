@@ -14,6 +14,7 @@ GROUP = 'grp'
 REVIEW_REQUEST = 'rr'
 RESOURCE_NAMES = [INFO, USER, ROOT, REPOSITORY, SESSION, GROUP, REVIEW_REQUEST]
 
+
 def main():
     valid = False
     resource_map = {}
@@ -44,7 +45,6 @@ def main():
                 print resource
             else:
                 print resource_list
-                
 
     if not valid:
         print "usage: rb info -resource_name [resource_id]"

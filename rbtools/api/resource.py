@@ -342,7 +342,7 @@ class Resource(ResourceBase):
             rsc._load()
             return rsc
         else:
-            return RootResource(self.server_interface, url) 
+            return RootResource(self.server_interface, url)
 
 
 class ResourceListBase(ResourceBase):
@@ -398,7 +398,7 @@ class ResourceListBase(ResourceBase):
                     except urllib2.HTTPError, e:
                         raise RequestFailedError(
                             'The resource child could not be retrieved.')
- 
+
                 target_resource_type = self.query_resource_type(url)
 
                 if target_resource_type == RESOURCE_LIST:
@@ -446,12 +446,13 @@ class ResourceListBase(ResourceBase):
             resources = self.get_field(self.resource_name)[position]
 
             for n in resources:
-                rsc = Resource(self.server_interface, n['links']['self']['href'])
+                rsc = Resource(self.server_interface,
+                               n['links']['self']['href'])
                 rsc._load()
                 rscs.append(rsc)
         else:
             rscs = Resource(self.server_interface,
-                self.get_field(self.resource_name)[position]\
+                self.get_field(self.resource_name)[position] \
                 ['links']['self']['href'])
             rscs._load()
 

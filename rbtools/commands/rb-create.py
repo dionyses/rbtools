@@ -48,10 +48,8 @@ def main():
         diffs = review_request.get_or_create('diffs')
         print diffs
         resource_diff = diffs.create()
-        #resource_diff.update_field('basedir', ' ') 
+        #resource_diff.update_field('basedir', ' ')
         resource_diff.update_file('path', diff_data)
-        print resource_diff.url
-        resource_diff.url = 'http://demo.reviewboard.org/api/json/reviewrequests/4702/diff/new/'
 
         #if parent_diff_data:
         #    diff.update_file('parent_diff_path', parent_diff_data)

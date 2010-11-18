@@ -21,7 +21,7 @@ def main():
             m = re.match('--screen-shot:', sys.argv[1])
             if m:
                 file_name = re.split('--screen-shot:', sys.argv[1])[1]
-                valid = True        
+                valid = True
                 ss_file = open('%s' % file_name, 'r')
                 ss_data = {
                     'filename': os.path.split(file_name)[1],
