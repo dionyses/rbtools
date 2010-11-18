@@ -10,6 +10,11 @@ except ImportError:
     from simplejson import loads as json_loads
 
 
+RESOURCE = 'Resource'
+RESOURCE_LIST = 'Resource List'
+ROOT_RESOURCE = 'Root Resource'
+
+
 class ResourceBase(object):
     """ Base class from which other Resource objects should inherit.
     """
@@ -17,6 +22,7 @@ class ResourceBase(object):
         super(ResourceBase, self).__init__()
         self.url = None
         self.server_interface = server_interface
+        self.resource_name = None
         self.resource_type = None
         self.resource_string = None
         self.data = {}
@@ -144,6 +150,28 @@ class ResourceBase(object):
         """
         self._load()
 
+    def query_resource_type(self, resource_url):
+        """ Queries the url and returns its resource type
+
+        The specified resource url is queryed and its resource type is
+        returned.  Possible resource types are:
+            RESOURCE
+            RESOURCE_LIST
+            ROOT_RESOURCE
+        """
+        if re.search('(api/)$', resource_url):
+            return ROOT_RESOURCE
+        else:
+            # HTTP GET the resource to find out if it is a resource list
+            # or a resource
+            resp = self.server_interface.get(resource_url)
+            data_list = json_loads(resp)
+
+            if _is_resource_list(data_list):
+                return RESOURCE_LIST
+            else:
+                return RESOURCE
+
 
 class Resource(ResourceBase):
     """ An object which specifically deals with resources.
@@ -163,10 +191,11 @@ class Resource(ResourceBase):
     def __init__(self, server_interface, url):
         super(Resource, self).__init__(server_interface)
         self.url = url
+        self.resource_type = RESOURCE
         self.updates = {}
         self.file_updates = {}
 
-    def _determine_resource_type(self):
+    def _determine_resource_name(self):
         """ Attempts to determine and set the resource type.
         """
         # If the resource has been loaded
@@ -175,7 +204,7 @@ class Resource(ResourceBase):
                 # If the element in the root is not 'stat' then it is the
                 # resource type
                 if elem != 'stat':
-                    self.resource_type = elem
+                    self.resource_name = elem
         # Otherwise self.data has not be populated
         else:
             raise UnloadedResourceError(
@@ -217,7 +246,7 @@ class Resource(ResourceBase):
                     'be retrieved - The server response was: %s, %s' %
                     (self.data['stat'], self.data['err']))
 
-        self._determine_resource_type()
+        self._determine_resource_name()
         # If it is the first time save() is called on this resource then url
         # is set to the parent's create url.  Update this to self so that
         # future calls will go to the right place.
@@ -227,7 +256,7 @@ class Resource(ResourceBase):
         """ Loads the resource from the server.
         """
         super(Resource, self)._load()
-        self._determine_resource_type()
+        self._determine_resource_name()
 
     def get_field(self, key_list):
         """ Retrieves the field mapped to by key_list of this resource.
@@ -248,9 +277,9 @@ class Resource(ResourceBase):
         # this resource's type to the key_list to get the fields specific to
         # this resource
         if isinstance(key_list, list):
-            key_list = [self.resource_type] + key_list
+            key_list = [self.resource_name] + key_list
         else:
-            key_list = [self.resource_type, key_list]
+            key_list = [self.resource_name, key_list]
 
         return super(Resource, self).get_field(key_list)
 
@@ -287,10 +316,12 @@ class Resource(ResourceBase):
         .. note::
             The resource returned is always already loaded.
         """
+        url = self.get_link(link)
+
         try:
             # First create the resource if it doesn't already exist by
             # performing a blank post to the url
-            resp = self.server_interface.post(self.get_link(link), {})
+            resp = self.server_interface.post(url, {})
         except urllib2.HTTPError, e:
             if e.code == 500:
                 pass
@@ -301,20 +332,17 @@ class Resource(ResourceBase):
             else:
                 raise e
 
-        # Now GET the resource to find out if it is a resource list
-        # or a resource
-        resp = self.server_interface.get(self.get_link(link))
-        data_list = json_loads(resp)
+        target_resource_type = self.query_resource_type(url)
 
-        # If we are get_or_creating a ResourceList
-        if _is_resource_list(data_list):
-            return ResourceList(self.server_interface, self.get_link(link))
-        # If we are get_or_creating a Resource
-        else:
-            # Then _load it before returning it
-            rsc = Resource(self.server_interface, self.get_link(link))
+        if target_resource_type == RESOURCE_LIST:
+            return ResourceList(self.server_interface, url)
+        elif target_resource_type == RESOURCE:
+            rsc = Resource(self.server_interface, url)
+            # _load it before returning it
             rsc._load()
             return rsc
+        else:
+            return RootResource(self.server_interface, url) 
 
 
 class ResourceListBase(ResourceBase):
@@ -323,6 +351,7 @@ class ResourceListBase(ResourceBase):
     def __init__(self, server_interface, url):
         super(ResourceListBase, self).__init__(server_interface)
         self.url = url
+        self.resource_type = RESOURCE_LIST
         self.field_id = None
         # Set the _index for iteration to -1.  Each call to next() will first
         # increment the index then attempt to return the item
@@ -354,18 +383,35 @@ class ResourceListBase(ResourceBase):
             rsc = Resource(self.server_interface, child_url)
             rsc._load()
             return rsc
-        #Else the field id specifies a 'link'
         else:
             if field_id:
                 try:
-                    return ResourceList(self.server_interface,
-                                        self.get_link(field_id))
+                    url = self.get_link(field_id)
                 except InvalidKeyError, e:
-                    raise UnknownResourceTypeError(
-                        'The resource link could not be retrieved because '
-                        'this resource does not contain the link specified.')
+                    # There is no link named field_id, but field_id might
+                    # be a child resource whos id isn't numeric
+                    try:
+                        child_url = self.url + field_id + '/'
+                        rsc = Resource(self.server_interface, child_url)
+                        rsc._load()
+                        return rsc
+                    except urllib2.HTTPError, e:
+                        raise RequestFailedError(
+                            'The resource child could not be retrieved.')
+ 
+                target_resource_type = self.query_resource_type(url)
+
+                if target_resource_type == RESOURCE_LIST:
+                    return ResourceList(self.server_interface, url)
+                elif target_resource_type == RESOURCE:
+                    rsc = Resource(self.server_interface, url)
+                    # _load it before returning it
+                    rsc._load()
+                    return rsc
+                else:
+                    return RootResource(self.server_interface, url)
             else:
-                raise UnknownResourceTypeError(
+                raise UnknownResourceNameError(
                     'The resource link could not be retrieved because '
                     'this resource does not contain the link specified.')
 
@@ -380,12 +426,12 @@ class ResourceListBase(ResourceBase):
             self._index = -1
             raise StopIteration
         else:
-            return self.get(self.data[self.resource_type][self._index]['id'])
+            return self.get(self.data[self.resource_name][self._index]['id'])
 
     # Methods which allow for the ResourceList to behave like a Sequence.
     # That is, they allow the ResourceList to be indexed or sliced.
     def __len__(self):
-        return len(self.data[self.resource_type])
+        return len(self.data[self.resource_name])
 
     def __contains__(self, key):
         for n in self:
@@ -397,7 +443,7 @@ class ResourceListBase(ResourceBase):
     def __getitem__(self, position):
         if isinstance(position, slice):
             rscs = []
-            resources = self.get_field(self.resource_type)[position]
+            resources = self.get_field(self.resource_name)[position]
 
             for n in resources:
                 rsc = Resource(self.server_interface, n['links']['self']['href'])
@@ -405,7 +451,7 @@ class ResourceListBase(ResourceBase):
                 rscs.append(rsc)
         else:
             rscs = Resource(self.server_interface,
-                self.get_field(self.resource_type)[position]\
+                self.get_field(self.resource_name)[position]\
                 ['links']['self']['href'])
             rscs._load()
 
@@ -422,11 +468,10 @@ class ResourceList(ResourceListBase):
         """ Loads the resource list from the server.
         """
         super(ResourceListBase, self)._load()
-
         # Determine and set the resource list's resource type
         for elem in self.data:
             if elem not in ['stat', 'links', 'total_results', 'uri_templates']:
-                self.resource_type = elem
+                self.resource_name = elem
 
         if not _is_resource_list(self.data):
             raise InvalidResourceTypeError(
@@ -467,6 +512,12 @@ class RootResource(ResourceListBase):
             raise InvalidResourceTypeError(
                 'The resource loaded as a RootResource is not a root.')
 
+    def _load(self):
+        """ Loads the resource list from the server.
+        """
+        super(ResourceListBase, self)._load()
+        self.resource_name = 'root'
+
     def __next__(self):
         self._index += 1
 
@@ -503,7 +554,7 @@ class ReviewRequestDraft(Resource):
                 self.resource_string = resource.resource_string
                 self.data = resource.data
                 self._queryable = resource._queryable
-                self.resource_type = resource.resource_type
+                self.resource_name = resource.resource_name
             else:
                 self._load()
 
@@ -539,7 +590,7 @@ class ReviewRequest(Resource):
                 self.resource_string = resource.resource_string
                 self.data = resource.data
                 self._queryable = resource._queryable
-                self.resource_type = resource.resource_type
+                self.resource_name = resource.resource_name
             else:
                 self._load()
 

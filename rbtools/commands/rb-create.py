@@ -14,6 +14,7 @@ def main():
         valid = True
         cwd = os.getcwd()
         cookie = os.path.join(cwd, '.rb_cookie')
+        #server_url = 'http://0.0.0.0:8080/'
         server_url = 'http://demo.reviewboard.org/'
         client = get_client(server_url)
         diff, parent_diff = client.diff(None)
@@ -21,9 +22,10 @@ def main():
         diff_file.write(diff)
         diff_file.close()
 
-        diff_data = {}
-        diff_data['filename'] = 'diff'
-        diff_data['content'] = diff
+        diff_data = {
+            'filename': 'diff',
+            'content': diff
+        }
         parent_diff_data = None
 
         if parent_diff:
@@ -41,18 +43,21 @@ def main():
         review_request.update_field('submit_as', 'dionyses')
         review_request.update_field('repository', '2')
         review_request.save()
+
         print review_request
         diffs = review_request.get_or_create('diffs')
         print diffs
-        diff = diffs.create()
-        diff.update_field('basedir', '/trunk') 
-        diff.update_file('path', diff_data)
+        resource_diff = diffs.create()
+        #resource_diff.update_field('basedir', ' ') 
+        resource_diff.update_file('path', diff_data)
+        print resource_diff.url
+        resource_diff.url = 'http://demo.reviewboard.org/api/json/reviewrequests/4702/diff/new/'
 
-        if parent_diff_data:
-            diff.update_file('parent_diff_path', parent_diff_data)
+        #if parent_diff_data:
+        #    diff.update_file('parent_diff_path', parent_diff_data)
 
         try:
-            diff.save()
+            resource_diff.save()
             print diff
         except urllib2.HTTPError, e:
             print e.headers

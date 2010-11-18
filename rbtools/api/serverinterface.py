@@ -144,9 +144,6 @@ class ServerInterface(object):
             'Content-Length': str(len(body))
         }
 
-        print headers
-        print body
-
         if not self._valid_method(method):
             raise InvalidRequestMethod('An invalid HTTP method was used.')
 
