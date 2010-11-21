@@ -1,8 +1,8 @@
 import re
 
-from clients.client import Client, Repository
+from rbtools.clients.client import Client, Repository
+from rbtools.api.utilities import RBUtilities
 
-from api.utilities import RBUtilities
 
 class SVNClient(Client):
     """A Cleint for SVN repositories"""

@@ -4,7 +4,7 @@ import re
 import socket
 import stat
 
-from clients.client import Client, Repository
+from rbtools.clients.client import Client, Repository
 
 
 class PerforceClient(Client):

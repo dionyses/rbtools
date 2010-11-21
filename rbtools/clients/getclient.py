@@ -1,11 +1,11 @@
-from api.utilities import RBUtilities
+from rbtools.api.utilities import RBUtilities
 
-from clearcase import ClearCaseClient
-from clients.cvs import CVSClient
-from clients.git import GitClient
-from clients.mercurial import MercurialClient
-from clients.perforce import PerforceClient
-from clients.svn import SVNClient
+from rbtools.clients.clearcase import ClearCaseClient
+from rbtools.clients.cvs import CVSClient
+from rbtools.clients.git import GitClient
+from rbtools.clients.mercurial import MercurialClient
+from rbtools.clients.perforce import PerforceClient
+from rbtools.clients.svn import SVNClient
 
 CLIENTS = (
 SVNClient(),

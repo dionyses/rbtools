@@ -92,22 +92,23 @@ class RBUtilities(object):
         rc = p.wait()
 
         if rc and not ignore_errors and rc not in extra_ignore_errors:
-            self.die('Failed to execute command: %s\n%s' % (command, data))
+            msg = 'Failed to execute command: %s\n%s' % (command, data)
+            self.die(msg)
 
         return data
 
-    def die(msg=None):
+    def die(self, msg=None):
         """
         Cleanly exits the program with an error message. Erases all remaining
         temporary files.
         """
 
-        for tmpfile in tempfiles:
+        #for tmpfile in tempfiles:
 
-            try:
-                os.unlink(tmpfile)
-            except:
-                pass
+        #    try:
+        #        os.unlink(tmpfile)
+        #    except:
+        #        pass
 
         if msg:
             self.output(msg)

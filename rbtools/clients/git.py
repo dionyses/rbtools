@@ -1,8 +1,8 @@
 import os
 import re
 
-from clients.client import Client, Repository
-from clients.svn import SVNClient, SVNRepository
+from rbtools.clients.client import Client, Repository
+from rbtools.clients.svn import SVNClient, SVNRepository
 
 
 class GitClient(Client):
@@ -61,7 +61,7 @@ class GitClient(Client):
                                              util=self.util)
         else:
             # Versions of git-svn before 1.5.4 don't (appear to) support
-            # 'git svn info'.  If we fail because of an older git install,
+            # 'git svn info'. If we fail because of an older git install,
             # here, figure out what version of git is installed and give
             # the user a hint about what to do next.
             version = self.util.execute(["git", "svn", "--version"], \

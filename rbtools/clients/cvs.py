@@ -1,7 +1,7 @@
 import os
 import socket
 
-from clients.client import Client, Repository
+from rbtools.clients.client import Client, Repository
 
 
 class CVSClient(Client):

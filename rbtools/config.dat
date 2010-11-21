@@ -1,0 +1,3 @@
+api_extension  api/
+cookie  .rb_cookie
+server_url  http://demo.reviewbaord.org/

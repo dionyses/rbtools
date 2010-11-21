@@ -1,8 +1,8 @@
 import os
 import re
 
-from api.utilities import RBUtilities
-from clients.client import Client, Repository
+from rbtools.api.utilities import RBUtilities
+from rbtools.clients.client import Client, Repository
 
 
 class MercurialClient(Client):

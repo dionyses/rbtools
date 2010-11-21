@@ -16,7 +16,7 @@ if (sys.platform.startswith('win')
 else:
     import posixpath as cpath
 
-from clients.client import Client, Repository
+from rbtools.clients.client import Client, Repository
 
 
 class ClearCaseClient(Client):
