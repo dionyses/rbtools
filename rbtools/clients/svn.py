@@ -1,5 +1,7 @@
 import re
 
+from rbtools.api.resource import Resource, RootResource
+from rbtools.api.serverinterface import ServerInterface
 from rbtools.clients.client import Client, Repository
 from rbtools.api.utilities import RBUtilities
 
@@ -232,7 +234,7 @@ class SVNRepository(Repository):
     """
 
     def __init__(self, path, base_path, uuid, supports_parent_diffs=False):
-        RepositoryInfo.__init__(self, path, base_path,
+        Repository.__init__(self, path, base_path,
                                 supports_parent_diffs=supports_parent_diffs)
         self.uuid = uuid
 
@@ -243,9 +245,13 @@ class SVNRepository(Repository):
         uses an 'http' path, but the server uses a 'file' path for the same
         repository.) It does this by comparing repository UUIDs. If the
         repositories use the same path, you'll get back self, otherwise you'll
-        get a different SvnRepositoryInfo object (with a different path).
+        get a different SvnRepository object (with a different path).
         """
-        repositories = server.get_repositories()
+        
+        root = RootResource( server, server.server_url + '/api')
+        uri = '/json/repositories'
+        resource = root.get(uri)
+        repositories = resource.data['repositories']
 
         for repository in repositories:
 
@@ -261,7 +267,7 @@ class SVNRepository(Repository):
             relpath = self._get_relative_path(self.base_path, repos_base_path)
 
             if relpath:
-                return SvnRepositoryInfo(info['url'], relpath, self.uuid)
+                return SvnRepository(info['url'], relpath, self.uuid)
 
         # We didn't find a matching repository on the server. We'll just return
         # self and hope for the best.
