@@ -13,7 +13,7 @@ def main():
     if len(sys.argv) > 0:
         valid = True
         cwd = os.getcwd()
-        cookie = os.path.join(cwd, '.rb_cookie')
+#        cookie = os.path.join(cwd, '.rb_cookie')
         #server_url = 'http://0.0.0.0:8080/'
         server_url = 'http://demo.reviewboard.org/'
         client = get_client(server_url)
@@ -36,12 +36,12 @@ def main():
             parent_diff_path['filename'] = 'parent_diff'
             parent_diff_path['content'] = parent_diff
 
-        server = ServerInterface(server_url, cookie)
+        server = ServerInterface(server_url)
         root = RootResource(server, server_url + 'api/')
         review_requests = root.get('review_requests')
         review_request = review_requests.create()
         review_request.update_field('submit_as', 'dionyses')
-        review_request.update_field('repository', '2')
+        review_request.update_field('repository', '3')
         review_request.save()
 
         print review_request
