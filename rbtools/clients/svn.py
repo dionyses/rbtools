@@ -14,7 +14,6 @@ class SVNClient(Client):
 
         This is an actual implementation that returns info about the SVN repo
         """
-
         if not self.util.check_install('svn help'):
             return None
 
@@ -83,7 +82,6 @@ class SVNClient(Client):
         This function fixes the relevant section headers of the patch to
         portray this relationship.
         """
-
         # svn diff against a repository URL on two revisions appears to
         # handle moved files properly, so only adjust the diff file names
         # if they were created using a working copy.
@@ -110,7 +108,7 @@ class SVNClient(Client):
                     from_file = urllib.unquote(url[len(root):])
                     result.append(from_line.replace(to_file, from_file))
                 else:
-                    result.append(from_line)  # as is, no copy performed
+                    result.append(from_line) # as is, no copy performed
 
             # We only mangle '---' lines. All others get added straight to
             # the output.
@@ -132,7 +130,7 @@ class SVNClient(Client):
 
         return svninfo
 
-            # Adapted from server code parser.py
+    # Adapted from server code parser.py
     def parse_filename_header(self, s):
         parts = None
 
@@ -147,8 +145,8 @@ class SVNClient(Client):
         # This is technically wrong, so all we can do is assume that
         # 1) the filename won't have multiple consecutive spaces, and
         # 2) there's at least 2 spaces separating the filename and info.
-        if "  " in s:
-            parts = re.split(r"  +", s)
+        if " " in s:
+            parts = re.split(r" +", s)
 
         if parts:
             parts[1] = '\t' + parts[1]
@@ -163,7 +161,6 @@ class SVNClient(Client):
         This handles paths that have been svn switched to other parts of the
         repository.
         """
-
         result = []
 
         for line in diff_content:
@@ -175,7 +172,7 @@ class SVNClient(Client):
 
             if front:
 
-                if line.startswith('/'):  # already absolute
+                if line.startswith('/'): # already absolute
                     line = front + " " + line
                 else:
                     # filename and rest of line (usually the revision
@@ -232,7 +229,6 @@ class SVNRepository(Repository):
     A representation of a SVN source code repository. This version knows how to
     find a matching repository on the server even if the URLs differ.
     """
-
     def __init__(self, path, base_path, uuid, supports_parent_diffs=False):
         Repository.__init__(self, path, base_path,
                                 supports_parent_diffs=supports_parent_diffs)
@@ -246,16 +242,13 @@ class SVNRepository(Repository):
         repository.) It does this by comparing repository UUIDs. If the
         repositories use the same path, you'll get back self, otherwise you'll
         get a different SvnRepository object (with a different path).
-        """
-        
+        """    
         root = RootResource( server, server.server_url + '/api')
-        uri = '/json/repositories'
-        resource = root.get(uri)
-        repositories = resource.data['repositories']
+        repo_list = root.get('repositories')
 
-        for repository in repositories:
+        for repository in repo_list:
 
-            if repository['tool'] != 'Subversion':
+            if repository.get_field('tool') != 'Subversion':
                 continue
 
             info = self._get_repository_info(server, repository)
