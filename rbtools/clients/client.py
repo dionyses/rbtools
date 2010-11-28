@@ -4,11 +4,7 @@ import socket
 import sys
 import urllib
 
-<<<<<<< HEAD
-from api.utilities import RBUtilities
-=======
 from rbtools.api.utilities import RBUtilities
->>>>>>> abd01f60090d253186bdd5ab487061bdf292a5c2
 
 
 class Client(object):

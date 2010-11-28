@@ -634,6 +634,20 @@ class ReviewRequest(Resource):
         self.save()
 
 
+class DiffResource( Resource ):
+    def __init__(self, resource):
+        if isinstance(resource, Resource):
+            super(DiffResource, self).__init__(resource.server_interface,
+                                           resource.url)
+            if resource._queryable:
+                self.resource_string = resource.resource_string
+                self.data = resource.data
+                self._queryable = resource._queryable
+                self.resource_name = resource.resource_name
+            else:
+                self._load()
+
+
 # Auxillary methods not specific to any resource
 def _is_resource_list(data):
     """ Returns true if the data set is a resource list.
