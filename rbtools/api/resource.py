@@ -636,6 +636,35 @@ class ReviewRequest(Resource):
         self.save()
 
 
+class DiffResource(Resource):
+    """Resource associated with diff files on RB servers"""
+    def __init__(self, resource):
+        if isinstance(resource, Resource):
+            super(DiffResource, self).__init__(resource.server_interface,
+                                           resource.url)
+            if resource._queryable:
+                self.resource_string = resource.resource_string
+                self.data = resource.data
+                self._queryable = resource._queryable
+                self.resource_name = resource.resource_name
+            else:
+                self._load()
+
+    def get_fields(self):
+        """ provides a list of fields in the resource
+
+        Returns a list of the keys for the fields that exist in the
+        diff resource with the exception of links, as those are handled
+        separately
+        """
+        fields = self.data['diff'].keys()
+
+        if ('links' in fields):
+            fields.remove('links')
+
+        return fields
+
+
 class RepositoryList(ResourceList):
     """ Resource list specific to a list of repositories.
     """
@@ -663,6 +692,7 @@ class RepositoryList(ResourceList):
                 return repo.get_field('id')
 
         return None
+
 
 # Auxillary methods not specific to any resource
 def _is_resource_list(data):
