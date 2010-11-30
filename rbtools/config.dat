@@ -1,4 +1,6 @@
 api_extension  api/
 cookie  .rb_cookie
 server_url  http://demo.reviewboard.org/
-diff_file	rbdiff
+client_diff	client_diff
+server_diff	server_diff
+diff_mime	text/x-patch
