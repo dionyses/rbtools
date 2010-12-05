@@ -1,6 +1,9 @@
-api_extension  api/
-cookie  .rb_cookie
-server_url  http://demo.reviewboard.org/
-client_diff	client_diff
-server_diff	server_diff
-diff_mime	text/x-patch
+#general settings
+server_url	http://demo.reviewboard.org/
+api_extension	api/	#URI added to server_url to access the api
+cookie	.rb_cookie	#name of the cookie file
+
+#diff settings
+client_diff	client_diff	#the filename for a local diff
+server_diff	server_diff	#the filename for a downloaded diff
+diff_mime	text/x-patch	#mime-type used to access a diff file

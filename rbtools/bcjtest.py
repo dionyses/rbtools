@@ -1,15 +1,5 @@
-from clients.getclient import get_client
+from rbtools.api.settings import Settings
 
-#get the client
-client = get_client('http://demo.reviewboard.org')
-
-#get the lines that are different
-(diff_lines, parent_diff_lines) = client.diff(None)
-
-#create the diff file
-file = open ('diff.diff', 'w' )
-
-for line in diff_lines:
-    file.write(line)
-    
-file.close()
+s = Settings()
+s.add_setting( 'with_space', 'test value' )
+s.add_setting( 'with_comment', 'True', 'the comment' )
