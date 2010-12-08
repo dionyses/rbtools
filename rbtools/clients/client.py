@@ -39,6 +39,31 @@ class Client(object):
         """
         return (None, None)
 
+    def apply_patch(self, patch_file=None, commit=False):
+        """applies a patch to the current repository and optionally commits changes"""
+
+        if not patch_file:
+            print 'no patch was passed'
+            return False
+        
+        if not os.path.isfile(patch_file):
+            print str(patch_file) + 'is not a file in the current directory'
+            return False
+
+        return self._internal_apply_patch(patch_file, commit)
+
+    def _internal_apply_patch(self, patch_file, commit):
+        """actually applies the patch"""
+
+        success = False
+
+        print 'code to apply patch is not yet implemented'
+        #load file and strip unnecessary parts
+
+        #apply the patch using patch
+
+        return success
+
 
 class Repository(object):
     """A representation of a source code repository."""
